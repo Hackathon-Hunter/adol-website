@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import MainLayout from "./partial/MainLayout";
+import MainLayout from "../layout/MainLayout";
 import ChatInput from "@/components/ui/ChatInput";
 import UIChat from "@/components/ui/Chat/UIChat"; // pastikan path sesuai
 import { ArrowUp } from "lucide-react";
@@ -16,7 +16,7 @@ export default function Page() {
             {isChatOpen ? (
                 <UIChat />
             ) : (
-                <div>
+                <div className="flex flex-col h-full justify-center w-full">
                     {/* Header */}
                     <div className="flex flex-col justify-center items-center">
                         <ChatIcon width={64} height={64} className="text-blue-500" />
@@ -29,8 +29,12 @@ export default function Page() {
                         </h1>
                     </div>
 
-                    <ChatInput onSubmit={() => setIsChatOpen(true)} />
+                    {/* ChatInput full width */}
+                    <div className="w-full mt-4">
+                        <ChatInput onSubmit={() => setIsChatOpen(true)} />
+                    </div>
                 </div>
+
             )}
         </MainLayout>
     );
