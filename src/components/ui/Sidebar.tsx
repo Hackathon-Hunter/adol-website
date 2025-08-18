@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Home, Box, MessageSquare } from "lucide-react";
+import { Home, Box, MessageSquare, Headset, Settings, UserRound, CircleArrowRight, Bell } from "lucide-react";
 import { AdolLogo, ICPIcon } from "@/components/icons";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/components/providers/SidebarProvider";
@@ -105,6 +105,31 @@ export default function Sidebar() {
         </div>
 
         <div className="relative group">
+          <Link href="/notifications" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
+            <Bell
+              size={20}
+              className={`${isActive("/notifications")
+                ? "text-purple-500"
+                : "text-gray-400"
+                }`}
+            />
+            {!collapsed && (
+              <span className={`${isActive("/notifications")
+                ? "text-purple-500 font-medium"
+                : "text-gray-600"
+                }`}>
+                Notifications
+              </span>
+            )}
+          </Link>
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+              Messages
+            </div>
+          )}
+        </div>
+
+        <div className="relative group">
           <Link href="/infinity" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
             <ICPIcon
               width={20}
@@ -135,15 +160,40 @@ export default function Sidebar() {
       <div className={`border border-gray-300 transition-all duration-300 ${collapsed ? "w-8" : "w-full"}`}></div>
 
       {/* Bottom icons */}
-      <div className={`flex flex-col space-y-4 mt-4 ${collapsed ? "items-center" : ""}`}>
+      <div className={`flex flex-col space-y-4 mt-4 w-full ${collapsed ? "items-center" : ""}`}>
         <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <div className="w-8 h-8 rounded-full bg-gray-300" />
-          {!collapsed && <span className="text-gray-600">Settings</span>}
+          <Headset size={20}
+            className="text-gray-400" />
+          {!collapsed && <span className="text-black">Support</span>}
         </div>
         <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <div className="w-8 h-8 rounded-full bg-gray-300" />
-          {!collapsed && <span className="text-gray-600">Profile</span>}
+          <Settings size={20}
+            className="text-gray-400" />
+          {!collapsed && <span className="text-black">Settings</span>}
         </div>
+        <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
+          <span className="text-sm text-black">50</span>
+          {!collapsed && <span className="text-black">Credit</span>}
+        </div>
+        <div
+          className={`flex items-center p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-between" : "gap-3"
+            }`}
+        >
+          <div className="flex gap-2 items-center">
+            <div className="rounded-full border">
+              <UserRound size={20} className="text-gray-500" />
+            </div>
+            {!collapsed && <span className="text-black">Profile</span>}
+          </div>
+
+          {!collapsed && (
+            <div className="ml-auto">
+              <CircleArrowRight size={18} className="text-gray-500" />
+            </div>
+          )}
+        </div>
+
+
       </div>
     </div>
   );
