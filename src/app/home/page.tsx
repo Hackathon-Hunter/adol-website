@@ -6,12 +6,14 @@ import ChatInput from "@/components/ui/ChatInput";
 import UIChat from "@/components/ui/Chat/UIChat"; // pastikan path sesuai
 import { ArrowUp } from "lucide-react";
 import { ChatIcon } from "@/components/icons";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function Page() {
     const [isChatOpen, setIsChatOpen] = useState(false);
 
     return (
-        <MainLayout>
+        <ProtectedRoute>
+            <MainLayout>
             {/* Kalau chat terbuka tampilkan UIChat */}
             {isChatOpen ? (
                 <UIChat />
@@ -37,5 +39,6 @@ export default function Page() {
 
             )}
         </MainLayout>
+        </ProtectedRoute>
     );
 }

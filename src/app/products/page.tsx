@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Globe, Clock, MoreHorizontal, Store, RefreshCcw } from "lucide-react";
 import MainLayout from "../layout/MainLayout";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Product = {
     id: number;
@@ -77,6 +78,7 @@ export default function MyProduct() {
         filter === "All" ? products : products.filter((p) => p.status === filter);
 
     return (
+        <ProtectedRoute>
         <MainLayout>
             <div className="p-6">
                 {/* Header */}
@@ -114,10 +116,10 @@ export default function MyProduct() {
                                 />
                                 <span
                                     className={`absolute top-5 right-5 px-2 py-1 text-xs font-semibold rounded-full ${p.status === "Live"
-                                            ? "bg-blue-100 text-blue-600"
-                                            : p.status === "Draft"
-                                                ? "bg-orange-100 text-orange-600"
-                                                : "bg-green-100 text-green-600"
+                                        ? "bg-blue-100 text-blue-600"
+                                        : p.status === "Draft"
+                                            ? "bg-orange-100 text-orange-600"
+                                            : "bg-green-100 text-green-600"
                                         }`}
                                 >
                                     {p.status}
@@ -159,5 +161,6 @@ export default function MyProduct() {
                 </div>
             </div>
         </MainLayout>
+        </ProtectedRoute>
     );
 }

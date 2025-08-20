@@ -1,11 +1,46 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Shield, Smartphone, Key, Lock, Info, Ban } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Smartphone, Key, Lock, Info, Ban, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import GradientButton from '../components/ui/GradientButton';
+import { useAuth } from '../hooks/useAuth';
 
 export default function InternetIdentityLogin() {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { login, isAuthenticated, isLoading, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to a protected page if already authenticated
+    if (isAuthenticated && !isLoading) {
+      router.push('/home'); // Redirect to home page after login
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  const handleIcpLogin = async () => {
+    setError(null);
+    try {
+      await login();
+      // Success will be handled by useEffect
+    } catch (err) {
+      setError('Authentication failed. Please try again.');
+      console.error('Login error:', err);
+    }
+  };
+
+  // Show loading while auth is initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -28,6 +63,12 @@ export default function InternetIdentityLogin() {
             </div>
             <p className="text-gray-500 text-sm">Authenticate securely on the Internet Computer</p>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+              {error}
+            </div>
+          )}
 
           {/* Features List */}
           <div className="space-y-4 mb-8">
@@ -54,10 +95,20 @@ export default function InternetIdentityLogin() {
 
           <GradientButton
             className="mb-4"
-            onClick={() => console.log("Button clicked")}
+            onClick={handleIcpLogin}
+            disabled={isLoading}
           >
-            <Shield size={20} />
-            <span>Sign in with Internet Identity</span>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Connecting...</span>
+              </>
+            ) : (
+              <>
+                <Shield size={20} />
+                <span>Sign in with Internet Identity</span>
+              </>
+            )}
           </GradientButton>
 
           {/* Cancel Button */}

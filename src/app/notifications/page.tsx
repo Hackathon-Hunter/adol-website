@@ -16,6 +16,7 @@ import MainLayout from "../layout/MainLayout";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import CircleIcon from "@/components/ui/CircleIcon";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function Notifications() {
     const router = useRouter();
@@ -108,6 +109,7 @@ export default function Notifications() {
             : notifications.filter((n) => n.type === activeTab);
 
     return (
+        <ProtectedRoute>
         <MainLayout>
             <div className="bg-white rounded-3xl border px-64 py-10">
                 {/* Header */}
@@ -216,5 +218,6 @@ export default function Notifications() {
                 </div>
             </div>
         </MainLayout>
+        </ProtectedRoute>
     );
 }
