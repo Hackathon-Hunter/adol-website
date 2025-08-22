@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MainLayout from "../../layout/MainLayout";
 import { ArrowLeft } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function ManageNotifications() {
     const [settings, setSettings] = useState({
@@ -45,8 +46,9 @@ export default function ManageNotifications() {
     ];
 
     return (
-        <MainLayout>
-            <div className="bg-white rounded-3xl border px-64 py-10">
+        <ProtectedRoute>
+            <MainLayout>
+                <div className="bg-white rounded-3xl border px-64 py-10">
                 {/* Header */}
                 <div className="mb-6">
                     <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -94,7 +96,8 @@ export default function ManageNotifications() {
                         </div>
                     ))}
                 </div>
-            </div>
-        </MainLayout>
+                </div>
+            </MainLayout>
+        </ProtectedRoute>
     );
 }

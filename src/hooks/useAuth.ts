@@ -38,8 +38,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   principal: null,
   actor: null,
-  login: async () => {},
-  logout: async () => {},
+  login: async () => { },
+  logout: async () => { },
   isLoading: true,
   authClient: null,
   isInitialized: false,
@@ -93,9 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (actorError) {
             console.warn("⚠️ Could not create actor (this is normal if you don't have a canister deployed yet):", actorError);
           }
+        } else {
+          setIsAuthenticated(false);
+          setPrincipal(null);
+          setActor(null);
         }
       } catch (error) {
-        console.error("❌ Error initializing auth:", error);
+        setIsAuthenticated(false);
+        setPrincipal(null);
+        setActor(null);
       } finally {
         setIsLoading(false);
         setIsInitialized(true);
