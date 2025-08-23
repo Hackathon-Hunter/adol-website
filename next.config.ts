@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // Removed "output: export" to enable dynamic routing
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
-  distDir: "out",
+  // distDir: "out", // Not needed without static export
   images: {
     remotePatterns: [
       {
@@ -15,13 +15,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // Disable server-side features for static export
+  // Enable React strict mode for better development experience
   reactStrictMode: true,
-
-  // Ensure all pages are statically generated
-  experimental: {
-    // Disable any server-side features
-  },
 
   // Environment variables for ICP
   env: {
@@ -33,10 +28,10 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_BACKEND_CANISTER_ID,
   },
 
-  // Ensure no server-side code is included
+  // Webpack configuration for browser compatibility
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Ensure client-side only
+      // Browser fallbacks for Node.js modules
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,

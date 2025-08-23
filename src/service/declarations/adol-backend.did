@@ -1,0 +1,494 @@
+type UserUpdate = 
+ record {
+   address: opt Address;
+   name: opt text;
+   phone: opt text;
+ };
+type UserRegistration = 
+ record {
+   address: opt Address;
+   email: text;
+   name: text;
+   phone: opt text;
+ };
+type UserId = principal;
+type UserError = 
+ variant {
+   InvalidEmail;
+   InvalidInput: text;
+   Unauthorized;
+   UserAlreadyExists;
+   UserNotFound;
+ };
+type User = 
+ record {
+   address: opt Address;
+   createdAt: int;
+   email: text;
+   icpBalance: nat;
+   id: UserId;
+   isActive: bool;
+   name: text;
+   phone: opt text;
+   updatedAt: int;
+ };
+type TopUpRequest = record {amount: nat;};
+type StreamingToken = record {arbitrary_data: text;};
+type StreamingStrategy = variant {
+                           Callback:
+                            record {
+                              callback: StreamingCallback;
+                              token: StreamingToken;
+                            };};
+type StreamingCallbackResponse = 
+ record {
+   body: blob;
+   token: opt StreamingToken;
+ };
+type StreamingCallback = func (StreamingToken) ->
+                          (opt StreamingCallbackResponse) query;
+type SellerProfileUpdate = 
+ record {
+   businessName: opt text;
+   contactEmail: opt text;
+   contactPhone: opt text;
+   description: opt text;
+   location: opt Address;
+ };
+type SellerProfileInput = 
+ record {
+   businessName: text;
+   contactEmail: text;
+   contactPhone: opt text;
+   description: text;
+   location: opt Address;
+ };
+type SellerProfile = 
+ record {
+   businessName: text;
+   contactEmail: text;
+   contactPhone: opt text;
+   createdAt: int;
+   description: text;
+   id: SellerId;
+   isVerified: bool;
+   location: opt Address;
+   rating: float64;
+   totalSales: nat;
+ };
+type SellerId = principal;
+type Result_8 = 
+ variant {
+   err: BuyerMatchError;
+   ok: vec PotentialMatch;
+ };
+type Result_7 = 
+ variant {
+   err: UserError;
+   ok: nat;
+ };
+type Result_6 = 
+ variant {
+   err: BuyerMatchError;
+   ok: PotentialMatch;
+ };
+type Result_5 = 
+ variant {
+   err: PaymentError;
+   ok: Payment;
+ };
+type Result_4 = 
+ variant {
+   err: BuyerMatchError;
+   ok: BuyerProfile;
+ };
+type Result_3 = 
+ variant {
+   err: OrderError;
+   ok: Order;
+ };
+type Result_2 = 
+ variant {
+   err: ProductError;
+   ok: Product;
+ };
+type Result_1 = 
+ variant {
+   err: UserError;
+   ok: User;
+ };
+type Result = 
+ variant {
+   err: BuyerMatchError;
+   ok: SellerProfile;
+ };
+type Response = 
+ record {
+   body: blob;
+   headers: vec HeaderField;
+   status_code: nat16;
+   streaming_strategy: opt StreamingStrategy;
+ };
+type Request = 
+ record {
+   body: blob;
+   headers: vec HeaderField;
+   method: text;
+   url: text;
+ };
+type RecommendedAction = 
+ variant {
+   ImmediateContact;
+   PriceAlert;
+   SendSample;
+   SpecialOffer;
+   WatchAndWait;
+ };
+type PurchaseRecord = 
+ record {
+   amount: nat;
+   productId: ProductId;
+   purchaseDate: int;
+   rating: opt nat;
+   sellerId: SellerId;
+ };
+type ProductUpdate = 
+ record {
+   categoryId: opt CategoryId;
+   condition: opt text;
+   description: opt text;
+   imageUrl: opt text;
+   isActive: opt bool;
+   keySellingPoints: opt vec text;
+   knownFlaws: opt text;
+   minimumPrice: opt nat;
+   name: opt text;
+   pickupDeliveryInfo: opt text;
+   price: opt nat;
+   reasonForSelling: opt text;
+   stock: opt nat;
+   targetPrice: opt nat;
+ };
+type ProductInput = 
+ record {
+   categoryId: CategoryId;
+   condition: text;
+   description: text;
+   imageUrl: opt text;
+   keySellingPoints: vec text;
+   knownFlaws: text;
+   minimumPrice: opt nat;
+   name: text;
+   pickupDeliveryInfo: text;
+   price: nat;
+   reasonForSelling: text;
+   stock: nat;
+   targetPrice: opt nat;
+ };
+type ProductId = text;
+type ProductError = 
+ variant {
+   CategoryNotFound;
+   InsufficientStock;
+   InvalidInput: text;
+   ProductNotFound;
+   Unauthorized;
+ };
+type Product = 
+ record {
+   categoryId: CategoryId;
+   condition: text;
+   createdAt: int;
+   createdBy: principal;
+   description: text;
+   id: ProductId;
+   imageUrl: opt text;
+   isActive: bool;
+   keySellingPoints: vec text;
+   knownFlaws: text;
+   minimumPrice: opt nat;
+   name: text;
+   pickupDeliveryInfo: text;
+   price: nat;
+   reasonForSelling: text;
+   stock: nat;
+   targetPrice: opt nat;
+   updatedAt: int;
+ };
+type PotentialMatch = 
+ record {
+   buyerId: BuyerId;
+   createdAt: int;
+   estimatedInterest: InterestLevel;
+   id: MatchId;
+   isInterested: opt bool;
+   isViewed: bool;
+   matchReasons: vec MatchReason;
+   matchScore: float64;
+   productId: ProductId;
+   recommendedAction: RecommendedAction;
+   sellerId: SellerId;
+ };
+type PaymentStatus = 
+ variant {
+   Completed;
+   Failed;
+   Pending;
+   Refunded;
+ };
+type PaymentMethod = 
+ variant {
+   ICP;
+   TopUp;
+ };
+type PaymentId = nat;
+type PaymentError = 
+ variant {
+   InsufficientFunds;
+   InvalidAmount;
+   InvalidBlockIndex;
+   PaymentFailed: text;
+   PaymentNotFound;
+   TransferFailed: text;
+   Unauthorized;
+ };
+type Payment = 
+ record {
+   amount: nat;
+   completedAt: opt int;
+   createdAt: int;
+   id: PaymentId;
+   method: PaymentMethod;
+   status: PaymentStatus;
+   transactionId: opt text;
+   userId: principal;
+ };
+type OrderStatus = 
+ variant {
+   Cancelled;
+   Confirmed;
+   Delivered;
+   Pending;
+   Processing;
+   Refunded;
+   Shipped;
+ };
+type OrderItemInput = 
+ record {
+   productId: ProductId;
+   quantity: nat;
+ };
+type OrderItem = 
+ record {
+   pricePerUnit: nat;
+   productId: ProductId;
+   quantity: nat;
+   totalPrice: nat;
+ };
+type OrderInput = 
+ record {
+   items: vec OrderItemInput;
+   shippingAddress: Address;
+ };
+type OrderId = nat;
+type OrderError = 
+ variant {
+   EmptyCart;
+   InsufficientBalance;
+   InsufficientStock;
+   InvalidInput: text;
+   InvalidOrderStatus;
+   OrderNotFound;
+   ProductNotFound;
+   Unauthorized;
+ };
+type Order = 
+ record {
+   completedAt: opt int;
+   createdAt: int;
+   id: OrderId;
+   items: vec OrderItem;
+   shippingAddress: Address;
+   status: OrderStatus;
+   totalAmount: nat;
+   updatedAt: int;
+   userId: UserId;
+ };
+type MatchingCriteria = 
+ record {
+   categoryId: opt CategoryId;
+   maxMatches: nat;
+   maxPrice: opt nat;
+   minScore: float64;
+ };
+type MatchReason = 
+ variant {
+   BudgetMatch;
+   CategoryMatch;
+   HighRatedSeller;
+   KeywordMatch;
+   LocationMatch;
+   PopularProduct;
+   PreviousPurchase;
+   PriceMatch;
+   SimilarBuyers;
+ };
+type MatchId = nat;
+type InterestLevel = 
+ variant {
+   High;
+   Low;
+   Medium;
+   VeryHigh;
+   VeryLow;
+ };
+type ICPTopUpRequest = 
+ record {
+   amount: nat;
+   blockIndex: opt nat;
+ };
+type HeaderField = 
+ record {
+   text;
+   text;
+ };
+type CategoryInput = 
+ record {
+   code: text;
+   description: text;
+   name: text;
+ };
+type CategoryId = nat;
+type Category = 
+ record {
+   code: text;
+   createdAt: int;
+   description: text;
+   id: CategoryId;
+   isActive: bool;
+   name: text;
+ };
+type BuyerProfileUpdate = 
+ record {
+   budget: opt nat;
+   email: opt text;
+   location: opt Address;
+   name: opt text;
+   phone: opt text;
+ };
+type BuyerProfileInput = 
+ record {
+   budget: nat;
+   email: text;
+   location: opt Address;
+   name: text;
+   phone: opt text;
+ };
+type BuyerProfile = 
+ record {
+   budget: nat;
+   createdAt: int;
+   email: text;
+   id: BuyerId;
+   isActive: bool;
+   location: opt Address;
+   name: text;
+   phone: opt text;
+   purchaseHistory: vec PurchaseRecord;
+   updatedAt: int;
+ };
+type BuyerMatchError = 
+ variant {
+   BuyerNotFound;
+   InsufficientData;
+   InvalidInput: text;
+   MatchNotFound;
+   ProductNotFound;
+   SellerNotFound;
+   Unauthorized;
+ };
+type BuyerId = principal;
+type Address = 
+ record {
+   city: text;
+   country: text;
+   state: text;
+   street: text;
+   zipCode: text;
+ };
+service : {
+  addPurchaseRecord: ("record": PurchaseRecord) -> (Result_4);
+  cancelOrder: (orderId: OrderId) -> (Result_3);
+  createBuyerProfile: (input: BuyerProfileInput) -> (BuyerProfile);
+  createCategory: (input: CategoryInput) -> (Category);
+  createOrder: (input: OrderInput) -> (Result_3);
+  createProduct: (input: ProductInput) -> (Result_2);
+  createSellerProfile: (input: SellerProfileInput) -> (SellerProfile);
+  findPotentialMatches: (criteria: MatchingCriteria) -> (Result_8);
+  getAllBuyerProfiles: () -> (vec BuyerProfile);
+  getAllMatches: () -> (vec PotentialMatch);
+  getAllOrders: () -> (vec Order);
+  getAllPayments: () -> (vec Payment);
+  getAllProducts: () -> (vec Product);
+  getAllSellerProfiles: () -> (vec SellerProfile);
+  getAllUsers: () -> (vec User);
+  getBalance: () -> (Result_7);
+  getBuyerProfile: () -> (Result_4);
+  getBuyerProfileById: (buyerId: BuyerId) -> (Result_4);
+  getCategories: () -> (vec Category) query;
+  getInfo: () ->
+   (record {
+      description: text;
+      name: text;
+      timestamp: int;
+      version: text;
+    }) query;
+  getMatchesForSeller: () -> (vec PotentialMatch);
+  getMyDepositInfo: () ->
+   (record {
+      instructions: text;
+      platformAccount: principal;
+      userSubaccount: text;
+    });
+  getMyMatches: () -> (vec PotentialMatch);
+  getMyOrders: () -> (vec Order);
+  getMyPayments: () -> (vec Payment);
+  getOrder: (orderId: OrderId) -> (Result_3);
+  getOrdersByStatus: (status: OrderStatus) -> (vec Order);
+  getOwnerICPAccount: () ->
+   (record {
+      account: text;
+      instructions: text;
+      minimumAmount: nat;
+      "principal": text;
+    }) query;
+  getPayment: (paymentId: PaymentId) -> (Result_5);
+  getPaymentConfig: () ->
+   (record {
+      minimumAmount: nat;
+      platformAccount: principal;
+      simulationMode: bool;
+    }) query;
+  getProduct: (productId: ProductId) -> (Result_2) query;
+  getProducts: () -> (vec Product) query;
+  getProductsByCategory: (categoryId: CategoryId) -> (vec Product) query;
+  getProfile: () -> (Result_1);
+  getSellerProfile: () -> (Result);
+  getSellerProfileById: (sellerId: SellerId) -> (Result);
+  health: () -> (record {
+                   status: text;
+                   timestamp: int;
+                 }) query;
+  http_request: (request: Request) -> (Response) query;
+  http_request_update: (request: Request) -> (Response);
+  markMatchAsViewed: (matchId: nat) -> (Result_6);
+  registerUser: (registration: UserRegistration) -> (Result_1);
+  setMatchInterest: (matchId: nat, isInterested: bool) -> (Result_6);
+  topUpBalance: (request: TopUpRequest) -> (Result_5);
+  topUpBalanceWithICP: (request: ICPTopUpRequest) -> (Result_5);
+  updateBuyerProfile: (update: BuyerProfileUpdate) -> (Result_4);
+  updateOrderStatus: (orderId: OrderId, status: OrderStatus) -> (Result_3);
+  updateProduct: (productId: ProductId, update: ProductUpdate) -> (Result_2);
+  updateProfile: (update: UserUpdate) -> (Result_1);
+  updateSellerProfile: (update: SellerProfileUpdate) -> (Result);
+}

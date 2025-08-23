@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Home, Box, MessageSquare, Headset, Settings, UserRound, CircleArrowRight, Bell } from "lucide-react";
+import { Home, Box, MessageSquare, Headset, Settings, UserRound, CircleArrowRight, Bell, Wallet } from "lucide-react";
 import { AdolLogo, ICPIcon } from "@/components/icons";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/components/providers/SidebarProvider";
@@ -130,6 +130,31 @@ export default function Sidebar() {
         </div>
 
         <div className="relative group">
+          <Link href="/credits" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
+            <Wallet
+              size={20}
+              className={`${isActive("/credits")
+                ? "text-purple-500"
+                : "text-gray-400"
+                }`}
+            />
+            {!collapsed && (
+              <span className={`${isActive("/credits")
+                ? "text-purple-500 font-medium"
+                : "text-gray-600"
+                }`}>
+                Credits
+              </span>
+            )}
+          </Link>
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+              Credits
+            </div>
+          )}
+        </div>
+
+        <div className="relative group">
           <Link href="/infinity" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
             <ICPIcon
               width={20}
@@ -172,8 +197,10 @@ export default function Sidebar() {
           {!collapsed && <span className="text-black">Settings</span>}
         </div>
         <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <span className="text-sm text-black">50</span>
-          {!collapsed && <span className="text-black">Credit</span>}
+          <Link href="/credits" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
+            <span className="text-sm text-black">50</span>
+            {!collapsed && <span className="text-black">Credit</span>}
+          </Link>
         </div>
         <div
           className={`flex items-center p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-between" : "gap-3"
@@ -195,6 +222,6 @@ export default function Sidebar() {
 
 
       </div>
-    </div>
+    </div >
   );
 }

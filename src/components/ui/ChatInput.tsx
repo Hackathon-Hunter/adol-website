@@ -3,10 +3,23 @@
 import { useState } from "react";
 import { ChatIcon } from "@/components/icons";
 import { ArrowUp, Sparkles, Upload, X } from "lucide-react";
+import { fileToBase64, analyzeImageForProductListing, getAnalysisCost, type ProductListing } from "@/service/api/openaiService";
 
-export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
+interface ChatInputProps {
+  onSubmit: (data: { 
+    text: string; 
+    images: File[]; 
+    hasImages: boolean;
+    onAnalysisComplete?: (results: ProductListing[]) => void;
+  }) => void;
+}
+
+export default function ChatInput({ onSubmit }: ChatInputProps) {
   const [previews, setPreviews] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -17,6 +30,7 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
 
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
     setPreviews((prev) => [...prev, ...urls]);
+    setUploadedFiles((prev) => [...prev, ...imageFiles]);
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,10 +39,34 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
 
     const urls = imageFiles.map((file) => URL.createObjectURL(file));
     setPreviews((prev) => [...prev, ...urls]);
+    setUploadedFiles((prev) => [...prev, ...imageFiles]);
   };
 
-  const removeImage = (url: string) => {
-    setPreviews((prev) => prev.filter((img) => img !== url));
+  const removeImage = (url: string, index: number) => {
+    setPreviews((prev) => prev.filter((img, idx) => idx !== index));
+    setUploadedFiles((prev) => prev.filter((file, idx) => idx !== index));
+    URL.revokeObjectURL(url); // Clean up memory
+  };
+
+  const handleSubmit = async () => {
+    if (isAnalyzing) return;
+    
+    const hasImages = uploadedFiles.length > 0;
+    const hasText = inputText.trim().length > 0;
+    
+    if (!hasImages && !hasText) return;
+
+    // Pass data to parent component - it will handle the analysis
+    onSubmit({
+      text: inputText,
+      images: uploadedFiles,
+      hasImages: hasImages
+    });
+    
+    // Reset form
+    setInputText("");
+    setPreviews([]);
+    setUploadedFiles([]);
   };
 
   return (
@@ -55,7 +93,7 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
                   className="w-full h-full object-cover rounded-xl shadow-sm"
                 />
                 <button
-                  onClick={() => removeImage(url)}
+                  onClick={() => removeImage(url, idx)}
                   className="absolute -top-1 -right-1 bg-white border rounded-full p-0.5 shadow"
                 >
                   <X size={12} className="text-gray-600" />
@@ -69,9 +107,12 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
         <div className="flex gap-3">
           <Sparkles size={20} className="text-purple-500 mt-1" />
           <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
             placeholder="Tell me what you want to sell or drop a quick snap works — or just hit enter"
             className="w-full resize-none text-sm text-gray-500 p-2 focus:outline-none bg-transparent"
             rows={2}
+            disabled={isAnalyzing}
           />
         </div>
 
@@ -107,7 +148,8 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
               className="w-8 h-8 px-[6px] rounded-full text-white font-medium text-sm
         transition-all duration-200 hover:scale-105 active:scale-95
         disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              onClick={onSubmit}
+              onClick={handleSubmit}
+              disabled={isAnalyzing || (uploadedFiles.length === 0 && inputText.trim().length === 0)}
               style={{
                 background: "linear-gradient(180deg, #9BA2FE 0%, #615FFF 100%)",
                 boxShadow: `
@@ -118,7 +160,11 @@ export default function ChatInput({ onSubmit }: { onSubmit: () => void }) {
           `,
               }}
             >
-              <ArrowUp size={18} />
+              {isAnalyzing ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <ArrowUp size={18} />
+              )}
             </button>
           </div>
         </div>
