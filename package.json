@@ -11,6 +11,8 @@
   "dependencies": {
     "@dfinity/agent": "^3.2.1",
     "@dfinity/auth-client": "^3.2.1",
+    "@dfinity/candid": "^3.2.2",
+    "@dfinity/identity": "^3.2.2",
     "@dfinity/principal": "^3.2.1",
     "lucide-react": "^0.539.0",
     "next": "15.4.6",
