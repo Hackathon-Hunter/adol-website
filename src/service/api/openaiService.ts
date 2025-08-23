@@ -3,8 +3,7 @@ import OpenAI from "openai";
 // OpenAI client configuration using OpenRouter with GPT-4.0
 const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey:
-    "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",
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true, // Allow usage in browser
 });
 
