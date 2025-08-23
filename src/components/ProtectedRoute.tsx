@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Only redirect if auth is fully initialized and user is not authenticated
     if (isInitialized && !isLoading && !isAuthenticated) {
       console.log('User not authenticated, redirecting to login from:', pathname);
-      router.push("/");
+      router.push("/auth");
     }
   }, [isAuthenticated, isLoading, isInitialized, router, pathname]);
 
