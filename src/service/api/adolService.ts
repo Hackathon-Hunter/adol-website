@@ -184,6 +184,53 @@ export class AdolService {
     }
   }
 
+  // Get products created by the current authenticated user
+  async getMyProducts(): Promise<Product[]> {
+    try {
+      await this.ensureActor();
+      
+      // Check if user is authenticated
+      const isAuth = await this.isAuthenticated();
+      if (!isAuth || !this.authClient) {
+        console.warn("User not authenticated, cannot get user's products");
+        return [];
+      }
+
+      // Get the user's principal ID
+      const identity = this.authClient.getIdentity();
+      const userPrincipal = identity.getPrincipal();
+      const userPrincipalString = userPrincipal.toString();
+      console.log("Getting products for user principal:", userPrincipalString);
+
+      // Get all products and filter by current user's principal
+      const allProducts = await this.actor.getProducts();
+      console.log("All products:", allProducts.length);
+      
+      const userProducts = allProducts.filter((product: Product) => {
+        // Convert createdBy to string for comparison
+        let createdByString: string;
+        if (typeof product.createdBy === 'string') {
+          createdByString = product.createdBy;
+        } else {
+          // Handle case where createdBy might be a Principal object
+          createdByString = String(product.createdBy);
+        }
+        
+        const isUserProduct = createdByString === userPrincipalString;
+        if (isUserProduct) {
+          console.log(`Found user product: ${product.name} (${product.id})`);
+        }
+        return isUserProduct;
+      });
+      
+      console.log(`Found ${userProducts.length} products for user ${userPrincipalString}`);
+      return userProducts;
+    } catch (error) {
+      console.error("Failed to get user's products:", error);
+      return [];
+    }
+  }
+
   async getProduct(productId: string): Promise<Product | null> {
     try {
       await this.ensureActor();

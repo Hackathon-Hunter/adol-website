@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Globe, Clock, MoreHorizontal, Store, RefreshCcw } from "lucide-react";
 import MainLayout from "../layout/MainLayout";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { getAdolService, type Product as BackendProduct } from "@/service/api/adolService";
+import { useAuth } from "@/hooks/useAuth";
 
 // Convert backend product to display format
 interface Product {
@@ -22,8 +22,9 @@ interface Product {
   condition: string;
 }
 
-export default function MyProduct() {
+export default function ProductsPage() {
     const router = useRouter();
+    const { principal, isAuthenticated } = useAuth();
     const [filter, setFilter] = useState<"All" | "Live" | "Drafts" | "Sold">("All");
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,16 +47,26 @@ export default function MyProduct() {
         };
     };
 
-    // Load products from backend
+    // Load products from backend - show all products if not authenticated, user's products if authenticated
     useEffect(() => {
         const loadProducts = async () => {
             try {
                 setLoading(true);
                 setError(null);
                 const adolService = await getAdolService();
-                const backendProducts = await adolService.getProducts();
-                console.log(backendProducts, 'line 57')
-                const convertedProducts = backendProducts.map(convertBackendProduct);
+                
+                let fetchedProducts: BackendProduct[] = [];
+                if (isAuthenticated && principal) {
+                    // Show only user's products if authenticated
+                    fetchedProducts = await adolService.getMyProducts();
+                    console.log("User products:", fetchedProducts);
+                } else {
+                    // Show all products if not authenticated
+                    fetchedProducts = await adolService.getProducts();
+                    console.log("All products:", fetchedProducts);
+                }
+                
+                const convertedProducts = fetchedProducts.map(convertBackendProduct);
                 setProducts(convertedProducts);
             } catch (err) {
                 console.error("Failed to load products:", err);
@@ -66,14 +77,23 @@ export default function MyProduct() {
         };
 
         loadProducts();
-    }, []);
+    }, [isAuthenticated, principal]);
 
     const refreshProducts = async () => {
         try {
             setLoading(true);
             const adolService = await getAdolService();
-            const backendProducts = await adolService.getProducts();
-            const convertedProducts = backendProducts.map(convertBackendProduct);
+            
+            let fetchedProducts: BackendProduct[] = [];
+            if (isAuthenticated && principal) {
+                // Refresh user's products if authenticated
+                fetchedProducts = await adolService.getMyProducts();
+            } else {
+                // Refresh all products if not authenticated
+                fetchedProducts = await adolService.getProducts();
+            }
+            
+            const convertedProducts = fetchedProducts.map(convertBackendProduct);
             setProducts(convertedProducts);
         } catch (err) {
             console.error("Failed to refresh products:", err);
@@ -90,12 +110,13 @@ export default function MyProduct() {
     };
 
     return (
-        <ProtectedRoute>
         <MainLayout>
             <div className="p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-black">My Product</h2>
+                    <h2 className="text-xl font-semibold text-black">
+                        {isAuthenticated ? "My Products" : "Products"}
+                    </h2>
                     <button
                         onClick={refreshProducts}
                         disabled={loading}
@@ -105,6 +126,15 @@ export default function MyProduct() {
                         Refresh
                     </button>
                 </div>
+
+                {/* Show login prompt for better UX when not authenticated */}
+                {!isAuthenticated && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-blue-800 text-sm">
+                            <span className="font-medium">Tip:</span> Log in to see and manage your own products.
+                        </p>
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div className="flex gap-3 mb-6">
@@ -221,6 +251,5 @@ export default function MyProduct() {
                 )}
             </div>
         </MainLayout>
-        </ProtectedRoute>
     );
 }

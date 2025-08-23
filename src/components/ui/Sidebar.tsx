@@ -1,15 +1,21 @@
 "use client";
 import Link from "next/link";
-import { Home, Box, MessageSquare, Headset, Settings, UserRound, CircleArrowRight, Bell, Wallet } from "lucide-react";
+import { Home, Box, MessageSquare, Headset, Settings, UserRound, CircleArrowRight, Bell, Wallet, LogOut } from "lucide-react";
 import { AdolLogo, ICPIcon } from "@/components/icons";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/components/providers/SidebarProvider";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { collapsed } = useSidebar();
+  const { isAuthenticated, logout, principal } = useAuth();
 
   const isActive = (path: string) => pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <div
@@ -29,30 +35,33 @@ export default function Sidebar() {
 
       {/* Menu */}
       <nav className={`flex flex-col flex-1 mt-4 ${collapsed ? "space-y-6 items-center" : "space-y-4"}`}>
-        <div className="relative group">
-          <Link href="/home" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
-            <Home
-              size={20}
-              className={`${isActive("/home")
-                ? "text-purple-500"
-                : "text-gray-400"
-                }`}
-            />
-            {!collapsed && (
-              <span className={`${isActive("/home")
-                ? "text-purple-500 font-medium"
-                : "text-gray-600"
-                }`}>
+        {/* Only show Home menu when authenticated */}
+        {isAuthenticated && (
+          <div className="relative group">
+            <Link href="/home" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
+              <Home
+                size={20}
+                className={`${isActive("/home")
+                  ? "text-purple-500"
+                  : "text-gray-400"
+                  }`}
+              />
+              {!collapsed && (
+                <span className={`${isActive("/home")
+                  ? "text-purple-500 font-medium"
+                  : "text-gray-600"
+                  }`}>
+                  Home
+                </span>
+              )}
+            </Link>
+            {collapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
                 Home
-              </span>
+              </div>
             )}
-          </Link>
-          {collapsed && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
-              Home
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="relative group">
           <Link href="/products" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
@@ -186,41 +195,70 @@ export default function Sidebar() {
 
       {/* Bottom icons */}
       <div className={`flex flex-col space-y-4 mt-4 w-full ${collapsed ? "items-center" : ""}`}>
-        <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <Headset size={20}
-            className="text-gray-400" />
-          {!collapsed && <span className="text-black">Support</span>}
-        </div>
-        <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <Settings size={20}
-            className="text-gray-400" />
-          {!collapsed && <span className="text-black">Settings</span>}
-        </div>
-        <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
-          <Link href="/credits" className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-gray-200 ${collapsed ? "justify-center" : ""}`}>
-            <span className="text-sm text-black">50</span>
-            {!collapsed && <span className="text-black">Credit</span>}
+        <div className="relative group">
+          <Link href="/support" className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
+            <Headset size={20} className="text-gray-400" />
+            {!collapsed && <span className="text-black">Support</span>}
           </Link>
-        </div>
-        <div
-          className={`flex items-center p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-between" : "gap-3"
-            }`}
-        >
-          <div className="flex gap-2 items-center">
-            <div className="rounded-full border">
-              <UserRound size={20} className="text-gray-500" />
-            </div>
-            {!collapsed && <span className="text-black">Profile</span>}
-          </div>
-
-          {!collapsed && (
-            <div className="ml-auto">
-              <CircleArrowRight size={18} className="text-gray-500" />
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+              Support
             </div>
           )}
         </div>
-
-
+        
+        <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
+          <Settings size={20} className="text-gray-400" />
+          {!collapsed && <span className="text-black">Settings</span>}
+        </div>
+        
+        {isAuthenticated && (
+          <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-center" : ""}`}>
+            <Link href="/credits" className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+              <span className="text-sm text-black">50</span>
+              {!collapsed && <span className="text-black">Credit</span>}
+            </Link>
+          </div>
+        )}
+        
+        {isAuthenticated ? (
+          <>
+            <div className={`flex items-center p-2 rounded-lg hover:bg-gray-200 cursor-pointer ${collapsed ? "justify-between" : "gap-3"}`}>
+              <div className="flex gap-2 items-center">
+                <div className="rounded-full border">
+                  <UserRound size={20} className="text-gray-500" />
+                </div>
+                {!collapsed && (
+                  <div className="flex flex-col">
+                    <span className="text-black text-sm">Profile</span>
+                    {principal && <span className="text-xs text-gray-500">{principal.toString().slice(0, 8)}...</span>}
+                  </div>
+                )}
+              </div>
+              {!collapsed && (
+                <div className="ml-auto">
+                  <CircleArrowRight size={18} className="text-gray-500" />
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={handleLogout}
+              className={`flex items-center gap-3 p-2 rounded-lg hover:bg-red-100 cursor-pointer text-red-600 ${collapsed ? "justify-center" : ""}`}
+            >
+              <LogOut size={20} />
+              {!collapsed && <span>Logout</span>}
+            </button>
+          </>
+        ) : (
+          <Link
+            href="/auth"
+            className={`flex items-center gap-3 p-2 rounded-lg hover:bg-blue-100 cursor-pointer text-blue-600 ${collapsed ? "justify-center" : ""}`}
+          >
+            <UserRound size={20} />
+            {!collapsed && <span>Login</span>}
+          </Link>
+        )}
       </div>
     </div >
   );
