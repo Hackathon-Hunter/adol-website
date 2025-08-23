@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "../hooks/useAuth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -12,12 +12,15 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, isInitialized } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Only redirect if auth is fully initialized and user is not authenticated
     if (isInitialized && !isLoading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login from:', pathname);
       router.push("/");
     }
-  }, [isAuthenticated, isLoading, isInitialized, router]);
+  }, [isAuthenticated, isLoading, isInitialized, router, pathname]);
 
   // Show loading while auth is initializing
   if (!isInitialized || isLoading) {

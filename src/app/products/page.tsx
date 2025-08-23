@@ -1,81 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Globe, Clock, MoreHorizontal, Store, RefreshCcw } from "lucide-react";
 import MainLayout from "../layout/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
-type Product = {
-    id: number;
-    title: string;
-    price: string;
-    minPrice: string;
-    status: "Live" | "Draft" | "Sold";
-    image: string;
-    marketplace: string;
-    updated: string;
-};
-
-const products: Product[] = [
-    {
-        id: 1,
-        title: "Marshall Major IV Bluetooth Headphones",
-        price: "Rp 1,850,000",
-        minPrice: "Rp 1,600,000",
-        status: "Live",
-        image: "https://upload.wikimedia.org/wikipedia/commons/6/6e/Marshall_Major_IV.jpg",
-        marketplace: "Facebook Marketplace",
-        updated: "2 hours ago",
-    },
-    {
-        id: 2,
-        title: "Nike Air Max 97 Silver Bullet",
-        price: "Rp 2,300,000",
-        minPrice: "Rp 2,000,000",
-        status: "Live",
-        image: "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/fc2d86b1-97bb-41de-bfe4-cc8d98efb725/air-max-97-shoes-JXw9pm.png",
-        marketplace: "Facebook Marketplace",
-        updated: "5 hours ago",
-    },
-    {
-        id: 3,
-        title: "iPhone 12 Pro Max 256GB Pacific Blue",
-        price: "Rp 12,000,000",
-        minPrice: "Rp 11,500,000",
-        status: "Draft",
-        image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/refurb-iphone-12-pro-max-blue-2020?wid=1144&hei=1144&fmt=jpeg",
-        marketplace: "-",
-        updated: "yesterday",
-    },
-    {
-        id: 4,
-        title: "Canon EOS M50 Mirrorless Camera",
-        price: "Rp 7,200,000",
-        minPrice: "Rp 6,800,000",
-        status: "Sold",
-        image: "https://upload.wikimedia.org/wikipedia/commons/c/c2/Canon_EOS_M50.jpg",
-        marketplace: "Facebook Marketplace",
-        updated: "2 days ago",
-    },
-    {
-        id: 5,
-        title: "Canon EOS M50 Mirrorless Camera",
-        price: "Rp 7,200,000",
-        minPrice: "Rp 6,800,000",
-        status: "Sold",
-        image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/refurb-iphone-12-pro-max-blue-2020?wid=1144&hei=1144&fmt=jpeg",
-        marketplace: "Facebook Marketplace",
-        updated: "2 days ago",
-    },
-];
+import { products, type Product } from "@/data/products";
 
 export default function MyProduct() {
+    const router = useRouter();
     const [filter, setFilter] = useState<"All" | "Live" | "Drafts" | "Sold">(
         "All"
     );
 
     const filtered =
         filter === "All" ? products : products.filter((p) => p.status === filter);
+
+    const handleProductClick = (productId: number) => {
+        router.push(`/products/${productId}`);
+    };
 
     return (
         <ProtectedRoute>
@@ -105,7 +48,8 @@ export default function MyProduct() {
                     {filtered.map((p) => (
                         <div
                             key={p.id}
-                            className="w-full border rounded-xl shadow-sm bg-white flex flex-col"
+                            onClick={() => handleProductClick(p.id)}
+                            className="bg-white rounded-2xl border shadow-sm flex flex-col hover:shadow-md transition-shadow cursor-pointer"
                         >
                             {/* Image */}
                             <div className="relative p-3">

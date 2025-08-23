@@ -6,6 +6,7 @@ interface ButtonPrimaryProps {
   onClick?: () => void;
   className?: string;
   type?: "button" | "submit" | "reset";
+  disabled?: boolean;
 }
 
 const ButtonPrimary: React.FC<ButtonPrimaryProps> = ({
@@ -13,12 +14,14 @@ const ButtonPrimary: React.FC<ButtonPrimaryProps> = ({
   onClick,
   className = "",
   type = "button",
+  disabled = false,
 }) => {
   return (
     <button
       type={type}
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm transition flex items-center justify-center gap-1 text-white ${className}`}
+      disabled={disabled}
+      className={`px-3 py-1.5 rounded-full text-sm transition flex items-center justify-center gap-1 text-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       style={{
         borderRadius: "999px",
         background: "linear-gradient(180deg, #7C86FF 0%, #615FFF 100%)",
