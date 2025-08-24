@@ -1,15 +1,12 @@
-import { ChatMessage } from "@/components/ui/Chat/UIChat";
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources";
 
-// OpenAI client configuration using OpenRouter with GPT-4.0
 const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
-// Product listing interface
 export interface ProductListing {
   item_name: string;
   category: string;
@@ -25,31 +22,33 @@ export interface ProductListing {
   imageBase64?: string;
 }
 
-// Global variables for conversation state
+export interface AIResponse {
+  productListing: ProductListing | null;
+  message: string;
+}
+
 const messages: ChatCompletionMessageParam[] = [];
 let productListing: ProductListing | null = null;
 
-// System prompt for image analysis
 const IMAGE_ANALYSIS_SYSTEM_PROMPT = `Anda adalah AI ahli marketplace yang menganalisis foto produk dan membuat listing lengkap.
-
 ANALISIS FOTO dengan teliti dan berikan estimasi harga yang REALISTIS berdasarkan produk yang terlihat dalam gambar.
-
 Berdasarkan foto, buat data produk dalam format JSON yang valid:
-
 {
-    "item_name": "Nama produk dengan brand/model jika terlihat",
-    "category": "Kategori produk (motor, elektronik, furniture, dll)", 
-    "description": "Deskripsi lengkap dan menarik produk",
-    "condition": "Excellent/Good/Fair/Poor",
-    "listing_price": [HARGA_REALISTIS_BERDASARKAN_PRODUK],
-    "target_price": [85%_DARI_LISTING_PRICE],
-    "minimum_price": [70%_DARI_LISTING_PRICE],
-    "selling_points": "3-5 poin menarik untuk pembeli",
-    "known_flaws": "Masalah/kerusakan yang terlihat dari foto",
-    "reason_selling": "Tebakan alasan menjual yang masuk akal",
-    "delivery_info": "Info pengambilan/pengiriman"
+ product_listing: {
+ "item_name": "Nama produk dengan brand/model jika terlihat",
+ "category": "Kategori produk (motor, elektronik, furniture, dll)",
+ "description": "Deskripsi lengkap dan menarik produk",
+ "condition": "Excellent/Good/Fair/Poor",
+ "listing_price": [HARGA_REALISTIS_BERDASARKAN_PRODUK],
+ "target_price": [85%_DARI_LISTING_PRICE],
+ "minimum_price": [70%_DARI_LISTING_PRICE],
+ "selling_points": "3-5 poin menarik untuk pembeli",
+ "known_flaws": "Masalah/kerusakan yang terlihat dari foto",
+ "reason_selling": "Tebakan alasan menjual yang masuk akal",
+ "delivery_info": "Info pengambilan/pengiriman"
+ },
+ message: "Penjelasan atau pertanyaan atau konfirmasi untuk pengguna"
 }
-
 KRITERIA PENTING:
 - Harga dalam Rupiah (angka saja, tanpa titik/koma)
 - Target price = 85% dari listing price
@@ -58,42 +57,38 @@ KRITERIA PENTING:
 - Berikan harga yang masuk akal untuk produk yang terlihat di foto
 - Pertimbangkan kondisi, merek, model, dan usia produk dari gambar
 - JANGAN gunakan harga template - berikan estimasi harga pasar yang nyata
-- Jika user memberikan notes tambahan, pertimbangkan dalam analisis`;
+- Jika user memberikan notes tambahan, pertimbangkan dalam analisis
+-- Respons berdasarkan bahasa pengguna`;
 
-// System prompt for chat conversation
 const CHAT_SYSTEM_PROMPT = `Anda adalah asisten AI marketplace yang membantu pengguna mengelola dan menyempurnakan product listing.
-
 KONTEKS PRODUK SAAT INI:
 ${
   productListing
     ? JSON.stringify(productListing, null, 2)
     : "Tidak ada produk yang sedang diedit"
 }
-
 TUGAS ANDA:
 1. Membantu pengguna menyempurnakan detail produk
 2. Menjawab pertanyaan tentang harga, deskripsi, atau kondisi
 3. Memberikan saran untuk meningkatkan daya tarik listing
 4. Memproses permintaan perubahan detail produk
-
 ATURAN RESPONS:
 - Jika pengguna ingin mengubah detail produk, WAJIB berikan respons dalam format JSON:
 {
-  "type": "update_product",
-  "changes": {
-    "field_name": "new_value"
-  },
-  "message": "Penjelasan perubahan untuk pengguna"
+ "type": "update_product",
+ "changes": {
+ "field_name": "new_value"
+ },
+ "message": "Penjelasan perubahan untuk pengguna"
 }
-
 - PENTING: Setiap kali ada perubahan produk, SELALU tampilkan JSON update DAN pesan konfirmasi
 - Untuk percakapan biasa, berikan respons teks normal
 - Selalu gunakan bahasa Indonesia yang ramah dan profesional
 - Berikan saran konstruktif untuk meningkatkan listing
-
+- Respons berdasarkan bahasa pengguna
 FORMAT FIELD YANG BISA DIUBAH:
 - item_name: string
-- category: string  
+- category: string
 - description: string
 - condition: "Excellent" | "Good" | "Fair" | "Poor"
 - listing_price: number
@@ -103,15 +98,14 @@ FORMAT FIELD YANG BISA DIUBAH:
 - known_flaws: string
 - reason_selling: string
 - delivery_info: string
-
 CONTOH RESPONS UPDATE:
 Ketika pengguna ingin mengubah alasan jual:
 {
-  "type": "update_product",
-  "changes": {
-    "reason_selling": "Sudah tidak dipakai"
-  },
-  "message": "Alasan penjualan telah diubah menjadi 'Sudah tidak dipakai'."
+ "type": "update_product",
+ "changes": {
+ "reason_selling": "Sudah tidak dipakai"
+ },
+ "message": "Alasan penjualan telah diubah menjadi 'Sudah tidak dipakai'."
 }`;
 
 /**
@@ -135,7 +129,6 @@ const processImageForAI = (
     img.onload = () => {
       let { width, height } = img;
 
-      // Calculate new dimensions maintaining aspect ratio
       const maxDimension = Math.max(width, height);
       if (maxDimension > maxSize) {
         const scale = maxSize / maxDimension;
@@ -146,16 +139,13 @@ const processImageForAI = (
       canvas.width = width;
       canvas.height = height;
 
-      // Set white background for transparent images
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, width, height);
 
-      // Draw image with high quality
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Convert to JPEG for better compatibility
       const dataUrl = canvas.toDataURL("image/jpeg", quality);
       resolve(dataUrl);
     };
@@ -168,7 +158,6 @@ const processImageForAI = (
     img.crossOrigin = "anonymous";
     img.src = objectUrl;
 
-    // Clean up object URL after processing
     const originalOnload = img.onload;
     img.onload = (event) => {
       if (originalOnload) {
@@ -215,7 +204,7 @@ export const fileToBase64 = async (
       throw new Error("File must be an image type");
     }
 
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
       throw new Error("Image file is too large. Maximum size is 50MB.");
     }
@@ -255,10 +244,10 @@ export const fileToBase64 = async (
 /**
  * Analyze image and generate product listing
  */
-export const analyzeImageForProductListing = async (
+export const sendMessageWithImage = async (
   base64Image: string,
   userNotes: string = ""
-): Promise<ProductListing> => {
+): Promise<AIResponse> => {
   try {
     const userPrompt = `Analisis foto produk ini dan buat listing marketplace lengkap.\n\nCatatan user: ${userNotes}`;
 
@@ -289,34 +278,110 @@ export const analyzeImageForProductListing = async (
       max_tokens: 1500,
       temperature: 0.7,
     });
-    messages.push(response.choices[0].message)
+
+    messages.push(response.choices[0].message);
     const content = response.choices[0]?.message?.content;
 
     if (!content) {
       throw new Error("No response content from OpenAI");
     }
 
-    // Extract JSON from response
-    let jsonMatch = content.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
-      jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-      if (jsonMatch) {
-        jsonMatch[0] = jsonMatch[1];
+    let jsonString = "";
+
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      jsonString = codeBlockMatch[1].trim();
+    } else {
+      const fullJsonMatch = content.match(/(\{[\s\S]*\})/);
+      if (fullJsonMatch && fullJsonMatch[1]) {
+        jsonString = fullJsonMatch[1].trim();
       }
     }
 
-    if (!jsonMatch) {
-      throw new Error("No valid JSON found in response");
+    const attemptJsonRecovery = (brokenJson: string): string => {
+      if (
+        brokenJson.includes('"product_listing": {') &&
+        !brokenJson.includes("}}")
+      ) {
+        return brokenJson + "}}";
+      }
+
+      if (
+        brokenJson.includes('"product_listing": {') &&
+        brokenJson.includes("}") &&
+        !brokenJson.endsWith("}")
+      ) {
+        return brokenJson + "}";
+      }
+      return brokenJson;
+    };
+
+    if (!jsonString) {
+      console.log("No valid JSON structure found in response:", content);
+      return {
+        productListing: null,
+        message:
+          "Maaf, terjadi kesalahan saat menganalisis gambar. Mohon coba lagi.",
+      };
     }
 
-    productListing = JSON.parse(jsonMatch[0]);
+    try {
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(jsonString);
+      } catch (initialParseError) {
+        console.warn(
+          "Initial JSON parse failed, attempting recovery:",
+          initialParseError
+        );
+        const recoveredJson = attemptJsonRecovery(jsonString);
+        console.log("Attempting to parse recovered JSON:", recoveredJson);
+        parsedResponse = JSON.parse(recoveredJson);
+      }
 
-    if (!productListing?.item_name || !productListing.category) {
-      throw new Error("Invalid product listing format");
+      if (
+        parsedResponse.product_listing &&
+        typeof parsedResponse.message === "string"
+      ) {
+        productListing = parsedResponse.product_listing;
+
+        return {
+          productListing: productListing,
+          message: parsedResponse.message,
+        };
+      } else if (parsedResponse.item_name) {
+        productListing = parsedResponse;
+
+        return {
+          productListing: productListing,
+          message:
+            content.replace(/```(?:json)?\s*[\s\S]*?```/, "").trim() ||
+            "Produk telah dianalisis dengan sukses!",
+        };
+      } else {
+        console.warn("Parsed JSON lacks expected structure:", parsedResponse);
+        return {
+          productListing: null,
+          message: "Format respons tidak sesuai. Mohon coba lagi.",
+        };
+      }
+    } catch (parseError) {
+      console.error(
+        "Error parsing JSON:",
+        parseError,
+        "JSON string:",
+        jsonString
+      );
+
+      return {
+        productListing: null,
+        message:
+          "Terjadi kesalahan dalam memproses respons. Silakan coba lagi.",
+      };
     }
-
-    return productListing;
   } catch (error) {
+    console.error("API or processing error:", error);
+
     if (error instanceof Error) {
       if (error.message.includes("401")) {
         throw new Error(
@@ -338,16 +403,12 @@ export const analyzeImageForProductListing = async (
 };
 
 /**
- * Enhanced sendMessageText function with product update capability
+ * sendMessageText function with product update capability
  */
-export const sendMessageText = async (message: string): Promise<{
-  productListing: ProductListing
-} | string> => {
+export const sendMessageText = async (message: string): Promise<AIResponse> => {
   try {
-    // Add user message to conversation history
     messages.push({ role: "user", content: message });
 
-    // Create dynamic system prompt based on current product state
     const currentSystemPrompt = CHAT_SYSTEM_PROMPT.replace(
       "${productListing ? JSON.stringify(productListing, null, 2) : 'Tidak ada produk yang sedang diedit'}",
       productListing
@@ -355,7 +416,6 @@ export const sendMessageText = async (message: string): Promise<{
         : "Tidak ada produk yang sedang diedit"
     );
 
-    // Create messages array with system prompt
     const conversationMessages: ChatCompletionMessageParam[] = [
       {
         role: "system",
@@ -373,126 +433,129 @@ export const sendMessageText = async (message: string): Promise<{
 
     const content = response.choices[0].message.content || "";
 
-    // Add assistant response to conversation history
     messages.push({ role: "assistant", content });
 
-    // Check if response contains product update JSON
-    try {
-      // Look for JSON with "type": "update_product"
-      const updateMatch = content.match(
-        /\{[\s\S]*?"type"\s*:\s*"update_product"[\s\S]*?\}/
-      );
+    let jsonString = "";
 
-      if (updateMatch && productListing) {
-        const updateData = JSON.parse(updateMatch[0]);
-
-        if (updateData.changes) {
-          // Create a backup of current product
-          const originalProduct = { ...productListing };
-
-          // Update the product listing
-          Object.keys(updateData.changes).forEach((key) => {
-            if (key in productListing!) {
-              (productListing as any)[key] = updateData.changes[key];
-            }
-          });
-
-          // Auto-calculate target and minimum prices if listing_price changed
-          if (updateData.changes.listing_price) {
-            productListing.target_price = Math.round(
-              updateData.changes.listing_price * 0.85
-            );
-            productListing.minimum_price = Math.round(
-              updateData.changes.listing_price * 0.7
-            );
-          }
-
-          // Return just the message part for user display
-          return {
-            productListing: productListing
-          };
-        }
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      jsonString = codeBlockMatch[1].trim();
+    } else {
+      const fullJsonMatch = content.match(/(\{[\s\S]*\})/);
+      if (fullJsonMatch && fullJsonMatch[1]) {
+        jsonString = fullJsonMatch[1].trim();
       }
-
-      // If no update JSON found, check for standalone product JSON (complete product listing)
-      const productMatch = content.match(/\{[\s\S]*?"item_name"[\s\S]*?\}/);
-      if (productMatch) {
-        try {
-          const updatedProductListing = JSON.parse(productMatch[0]);
-          if (
-            updatedProductListing.item_name &&
-            updatedProductListing.category
-          ) {
-            // Replace the entire product listing
-            Object.assign(productListing || {}, updatedProductListing);
-
-            // Return a confirmation message
-            return "Produk telah diperbarui dengan detail lengkap!";
-          }
-        } catch (parseError) {
-          // Not a valid product JSON, continue with normal response
-        }
-      }
-    } catch (parseError) {
-      // Response is not a product update, treating as normal message
     }
 
-    return content;
+    const attemptJsonRecovery = (brokenJson: string): string => {
+      if (
+        brokenJson.includes('"product_listing": {') &&
+        !brokenJson.includes("}}")
+      ) {
+        return brokenJson + "}}";
+      }
+
+      if (
+        (brokenJson.includes('"product_listing": {') ||
+          brokenJson.includes('"type": "update_product"')) &&
+        brokenJson.includes("}") &&
+        !brokenJson.endsWith("}")
+      ) {
+        return brokenJson + "}";
+      }
+      return brokenJson;
+    };
+
+    if (jsonString) {
+      try {
+        let jsonData;
+        try {
+          jsonData = JSON.parse(jsonString);
+        } catch (initialParseError) {
+          console.warn(
+            "Initial JSON parse failed, attempting recovery:",
+            initialParseError
+          );
+          const recoveredJson = attemptJsonRecovery(jsonString);
+          console.log("Attempting to parse recovered JSON:", recoveredJson);
+          jsonData = JSON.parse(recoveredJson);
+        }
+
+        if (
+          jsonData.type === "update_product" &&
+          jsonData.changes &&
+          productListing
+        ) {
+          try {
+            Object.keys(jsonData.changes).forEach((key) => {
+              if (productListing && key in productListing) {
+                (productListing as any)[key] = jsonData.changes[key];
+              }
+            });
+
+            if (jsonData.changes.listing_price !== undefined) {
+              const listingPrice = Number(jsonData.changes.listing_price);
+              if (!isNaN(listingPrice)) {
+                productListing.listing_price = listingPrice;
+                productListing.target_price = Math.round(listingPrice * 0.85);
+                productListing.minimum_price = Math.round(listingPrice * 0.7);
+              }
+            }
+
+            return {
+              productListing: productListing,
+              message: jsonData.message || "Produk berhasil diperbarui.",
+            };
+          } catch (updateError) {
+            console.error("Error applying product updates:", updateError);
+            return {
+              productListing: productListing,
+              message:
+                "Terjadi kesalahan saat memperbarui produk. Detail: " +
+                (updateError instanceof Error
+                  ? updateError.message
+                  : "Unknown error"),
+            };
+          }
+        }
+
+        if (jsonData.product_listing && jsonData.message) {
+          productListing = jsonData.product_listing;
+
+          return {
+            productListing: productListing,
+            message: jsonData.message,
+          };
+        }
+
+        if (jsonData.item_name && jsonData.category) {
+          if (!productListing) {
+            productListing = jsonData;
+          } else {
+            Object.assign(productListing, jsonData);
+          }
+
+          return {
+            productListing: productListing,
+            message: "Produk telah diperbarui dengan detail lengkap!",
+          };
+        }
+      } catch (jsonError) {
+        console.warn("Failed to parse JSON from response:", jsonError);
+      }
+    }
+
+    return {
+      productListing: productListing,
+      message:
+        content.replace(/```(?:json)?\s*[\s\S]*?```/, "").trim() || content,
+    };
   } catch (error) {
+    console.error("API call or processing error:", error);
     throw new Error(
       `Failed to process message: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
-  }
-};
-
-/**
- * Get current product listing
- */
-export const getCurrentProductListing = (): ProductListing | null => {
-  return productListing;
-};
-
-/**
- * Set current product listing
- */
-export const setCurrentProductListing = (
-  listing: ProductListing | null
-): void => {
-  productListing = listing;
-};
-
-/**
- * Clear conversation history
- */
-export const clearConversation = (): void => {
-  messages.length = 0;
-  productListing = null;
-};
-
-/**
- * Enhanced image analysis with fallback methods
- */
-export const analyzeImageWithFallback = async (
-  file: File,
-  userNotes: string = ""
-): Promise<ProductListing> => {
-  try {
-    // Try with optimized processed image first
-    const processedImage = await fileToBase64(file, "processed");
-    return await analyzeImageForProductListing(processedImage, userNotes);
-  } catch (error1) {
-    try {
-      // Try with direct file conversion
-      const directImage = await fileToBase64(file, "direct");
-      return await analyzeImageForProductListing(directImage, userNotes);
-    } catch (error2) {
-      throw new Error(
-        `Image analysis failed: ${
-          error1 instanceof Error ? error1.message : "Unknown error"
-        }`
-      );
-    }
   }
 };

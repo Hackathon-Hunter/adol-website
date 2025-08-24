@@ -1,366 +1,367 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import MainLayout from "../layout/MainLayout";
-import ChatInput from "@/components/ui/ChatInput";
-import UIChat from "@/components/ui/Chat/UIChat";
-import { ChatIcon } from "@/components/icons";
+import ChatInput from "@/components/ui/Chat/ChatInput";
+import Chat from "@/components/ui/Chat/Chat";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ProductListingCard from "@/components/ui/Chat/ProductListingChat";
 import {
+  ProductListing,
+  sendMessageWithImage,
   sendMessageText,
-  setCurrentProductListing,
-  getCurrentProductListing,
-  type ProductListing,
+  fileToBase64,
 } from "@/service/api/openaiService";
-import { getAdolService, type ProductInput } from "@/service/api/adolService";
+import { ChatIcon } from "@/components/icons";
+import { getAdolService } from "@/service/api/adolService";
 
-interface ChatMessage {
-  id: number;
-  sender: "user" | "bot";
-  text?: string;
-  image?: string;
-  productListing?: ProductListing;
-  quickReplies?: string[];
-  editingListing?: ProductListing;
+// Import the ProductInput interface
+interface ProductInput {
+  name: string;
+  description: string;
+  price: bigint;
+  stock: bigint;
+  imageBase64: [] | [string]; // Image data as base64 string
+  categoryId: bigint; // Backend expects bigint, not string
+  condition: string;
+  keySellingPoints: string[];
+  knownFlaws: string;
+  minimumPrice: [] | [bigint]; // Candid optional format
+  pickupDeliveryInfo: string;
+  reasonForSelling: string;
+  targetPrice: [] | [bigint]; // Candid optional format
 }
 
-export default function Page() {
+export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [currentEditingListing, setCurrentEditingListing] =
-    useState<ProductListing | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [productListing, setProductListing] = useState<ProductListing | null>(
+    null
+  );
+  const [isUpdated, setIsUpdated] = useState(false);
+  const [messages, setMessages] = useState<
+    {
+      id: number;
+      sender: "user" | "bot";
+      text?: string;
+      image?: string;
+    }[]
+  >([
+    {
+      id: 1,
+      sender: "bot",
+      text: "Hi! Upload a photo of your product and I'll create a listing for you.",
+    },
+  ]);
 
-  // Utility function to parse selling points
-  const parseSellingPoints = (sellingPoints: any): string[] => {
-    if (!sellingPoints) return [];
-    if (Array.isArray(sellingPoints))
-      return sellingPoints.filter((point) => point && point.trim());
-    if (typeof sellingPoints === "string")
-      return sellingPoints.split("\n").filter((point) => point && point.trim());
-    return [String(sellingPoints)];
-  };
+  const adolService = getAdolService();
 
-  const handleCreateProduct = async (listing: ProductListing) => {
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isUpdated) {
+      const timer = setTimeout(() => {
+        setIsUpdated(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isUpdated]);
+
+  const handleSubmit = async (text: string, imageFiles: File[]) => {
+    if (!text && imageFiles.length === 0) return;
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Add creating message
-      const creatingMessage: ChatMessage = {
-        id: Date.now(),
-        sender: "bot",
-        text: "Sedang membuat product listing... ⏳",
-      };
-      setChatMessages((prev) => [...prev, creatingMessage]);
+      const newMessageId = messages.length + 1;
+      const newMessages = [...messages];
 
-      const adolService = await getAdolService();
+      if (text) {
+        newMessages.push({
+          id: newMessageId,
+          sender: "user",
+          text,
+        });
+      }
 
-      // Get or create category ID
-      const categoryId = await adolService.getCategoryIdByName(
-        listing.category || "general"
+      setMessages(newMessages);
+
+      if (imageFiles.length > 0) {
+        const file = imageFiles[0];
+        const base64Image = await fileToBase64(file);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "user",
+            image: base64Image,
+          },
+        ]);
+
+        const aiResponse = await sendMessageWithImage(base64Image, text);
+
+        if (aiResponse.productListing) {
+          // Add image base64 to the product listing for later use
+          aiResponse.productListing.imageBase64 = base64Image;
+
+          setProductListing(aiResponse.productListing);
+          setIsUpdated(true);
+          setIsChatOpen(true);
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "bot",
+            text: aiResponse.message,
+          },
+        ]);
+      } else if (text) {
+        const aiResponse = await sendMessageText(text);
+
+        if (aiResponse.productListing) {
+          setProductListing(aiResponse.productListing);
+          setIsUpdated(true);
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "bot",
+            text: aiResponse.message,
+          },
+        ]);
+      }
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "An unknown error occurred"
       );
 
-      // Map ProductListing to ProductInput format
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          sender: "bot",
+          text: `Error: ${
+            error instanceof Error ? error.message : "An unknown error occurred"
+          }`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
+      }
+    }
+  };
+
+  const createProduct = async (listing: ProductListing) => {
+    setIsCreatingProduct(true);
+
+    try {
+      // Parse selling points into an array
+      const keySellingPoints = listing.selling_points
+        .split("\n")
+        .map((point) => point.replace(/^[•\-\*]\s*/, "").trim())
+        .filter((point) => point.length > 0);
+
+      // Convert prices to bigint for backend
+      const listingPrice = BigInt(listing.listing_price);
+      const targetPrice = BigInt(listing.target_price);
+      const minimumPrice = BigInt(listing.minimum_price);
+
+      // Convert category to bigint ID
+      const categoryId = BigInt(1); // Hardcoded default category ID
+
+      // Prepare product input matching the backend interface
       const productInput: ProductInput = {
-        name: listing.item_name || "Untitled Product",
-        description: listing.description || "No description provided",
-        price: BigInt(Math.max(1, listing.listing_price || 1)),
-        stock: BigInt(1),
+        name: listing.item_name,
+        description: listing.description,
+        price: listingPrice,
+        stock: BigInt(1), // Default to 1 item in stock
+        imageBase64: listing.imageBase64 ? [listing.imageBase64] : [],
         categoryId: categoryId,
-        condition: listing.condition || "used",
-        keySellingPoints: parseSellingPoints(listing.selling_points),
+        condition: mapConditionToBackend(listing.condition),
+        keySellingPoints:
+          keySellingPoints.length > 0
+            ? keySellingPoints
+            : ["Good quality product"],
         knownFlaws: listing.known_flaws || "None reported",
+        minimumPrice: [minimumPrice],
         pickupDeliveryInfo:
-          listing.delivery_info || "Contact seller for details",
-        reasonForSelling: listing.reason_selling || "Not specified",
-        minimumPrice: listing.minimum_price
-          ? [BigInt(Math.max(1, listing.minimum_price))]
-          : [],
-        targetPrice: listing.target_price
-          ? [BigInt(Math.max(1, listing.target_price))]
-          : [],
-        imageBase64:
-          listing.imageBase64 && listing.imageBase64.startsWith("data:image/")
-            ? [listing.imageBase64]
-            : [],
+          listing.delivery_info ||
+          "Pickup and delivery available, contact seller for details.",
+        reasonForSelling:
+          listing.reason_selling || "Upgrading to a newer model",
+        targetPrice: [targetPrice],
       };
 
-      const result = await adolService.createProduct(productInput);
+      // Call the service to create the product
+      const result = await (await adolService).createProduct(productInput);
 
       if (result) {
-        // Success
-        const resultMessage: ChatMessage = {
-          id: Date.now() + 1,
-          sender: "bot",
-          text: `✅ Product listing berhasil dibuat! 🎉\nProduct ID: ${result.id}`,
-        };
-        setChatMessages((prev) => [...prev, resultMessage]);
-
-        // Show success actions
-        const actionsMessage: ChatMessage = {
-          id: Date.now() + 2,
-          sender: "bot",
-          text: "Apa yang ingin Anda lakukan selanjutnya?",
-          quickReplies: [
-            "Buat listing lagi",
-            "Lihat product saya",
-            "Share ke marketplace",
-          ],
-        };
-        setChatMessages((prev) => [...prev, actionsMessage]);
-      } else {
-        // Try to create seller profile and retry
-        const retryMessage: ChatMessage = {
-          id: Date.now() + 1,
-          sender: "bot",
-          text: "🔄 Mencoba membuat profil seller dan mencoba lagi...",
-        };
-        setChatMessages((prev) => [...prev, retryMessage]);
-
-        try {
-          await adolService.createBasicSellerProfile();
-          const retryResult = await adolService.createProduct(productInput);
-
-          if (retryResult) {
-            const successMessage: ChatMessage = {
-              id: Date.now() + 2,
-              sender: "bot",
-              text: `✅ Product listing berhasil dibuat setelah setup profil seller! 🎉\nProduct ID: ${retryResult.id}`,
-            };
-            setChatMessages((prev) => [...prev, successMessage]);
-          } else {
-            const finalErrorMessage: ChatMessage = {
-              id: Date.now() + 2,
-              sender: "bot",
-              text: "❌ Gagal membuat listing setelah setup profil seller. Silakan coba lagi.",
-            };
-            setChatMessages((prev) => [...prev, finalErrorMessage]);
-          }
-        } catch (retryError) {
-          const errorMessage: ChatMessage = {
-            id: Date.now() + 2,
+        // Success - add success message to chat
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
             sender: "bot",
-            text: "❌ Gagal membuat listing. Silakan coba lagi.",
-          };
-          setChatMessages((prev) => [...prev, errorMessage]);
-        }
+            text: `✅ Selamat! Produk "${
+              listing.item_name
+            }" telah berhasil dibuat dan dipasarkan dengan harga ${new Intl.NumberFormat(
+              "id-ID",
+              {
+                style: "currency",
+                currency: "IDR",
+                minimumFractionDigits: 0,
+              }
+            ).format(
+              listing.listing_price
+            )}. Produk Anda sekarang sudah aktif dan siap untuk dijual.`,
+          },
+        ]);
+
+        // Reset product listing after successful creation
+        setProductListing(null);
+      } else {
+        // Error creating product - add error message to chat
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "bot",
+            text: "❌ Maaf, terjadi kesalahan saat membuat produk. Silakan periksa detail produk Anda dan coba lagi. Pastikan semua informasi sudah lengkap dan valid.",
+          },
+        ]);
       }
     } catch (error) {
-      let errorText = "❌ Gagal membuat listing: ";
+      console.error("Error creating product:", error);
 
-      if (error instanceof Error) {
-        if (error.message.includes("fetch")) {
-          errorText +=
-            "Tidak dapat terhubung ke backend. Periksa koneksi internet Anda.";
-        } else if (error.message.includes("auth")) {
-          errorText += "Masalah autentikasi. Silakan login kembali.";
-        } else {
-          errorText += error.message;
-        }
-      } else {
-        errorText += "Terjadi kesalahan tidak terduga. Silakan coba lagi.";
+      // Add error message to chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          sender: "bot",
+          text: `❌ Terjadi kesalahan: ${
+            error instanceof Error
+              ? error.message
+              : "Kesalahan tidak terduga saat membuat produk Anda. Silakan coba lagi nanti."
+          }`,
+        },
+      ]);
+    } finally {
+      setIsCreatingProduct(false);
+
+      // Scroll to bottom to show the latest message
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
       }
-
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: errorText,
-      };
-      setChatMessages((prev) => [...prev, errorMessage]);
     }
   };
 
-  const handleSendMessage = async (message: string) => {
-    // Handle system messages (from Edit First button)
-    if (message.startsWith("__SYSTEM_MESSAGE__")) {
-      const systemMessage = JSON.parse(
-        message.replace("__SYSTEM_MESSAGE__", "")
-      );
-      setChatMessages((prev) => [...prev, systemMessage]);
-
-      if (systemMessage.editingListing) {
-        setCurrentEditingListing(systemMessage.editingListing);
-        setCurrentProductListing(systemMessage.editingListing);
-      }
-      return;
-    }
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      sender: "user",
-      text: message,
-    };
-    setChatMessages((prev) => [...prev, userMessage]);
-
-    // Handle post-creation actions
-    if (message.includes("Buat listing lagi")) {
-      setChatMessages([]);
-      setIsChatOpen(false);
-      setCurrentEditingListing(null);
-      setCurrentProductListing(null);
-      return;
-    } else if (message.includes("Lihat product saya")) {
-      const responseMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: "Fitur 'Lihat Product Saya' akan segera tersedia! Untuk sementara, Anda bisa cek di dashboard. 📊",
-      };
-      setChatMessages((prev) => [...prev, responseMessage]);
-      return;
-    } else if (message.includes("Share ke marketplace")) {
-      const responseMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: "Fitur share ke marketplace (Tokopedia, Shopee, dll) akan segera hadir! 🚀",
-      };
-      setChatMessages((prev) => [...prev, responseMessage]);
-      return;
-    }
-
-    try {
-      // Get AI response
-      const response = await sendMessageText(message);
-
-      // Check if product was updated
-      const updatedProduct = getCurrentProductListing();
-      if (updatedProduct && updatedProduct !== currentEditingListing) {
-        setCurrentEditingListing(updatedProduct);
-      }
-
-      const botMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: response.toString(),
-      };
-      setChatMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: "Maaf, terjadi kesalahan. Silakan coba lagi.",
-      };
-      setChatMessages((prev) => [...prev, errorMessage]);
-    }
-  };
-
-  const handleChatSubmit = async (data: {
-    text: string;
-    images: File[];
-    hasImages: boolean;
-  }) => {
-    setIsChatOpen(true);
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      sender: "user",
-      text: data.text,
-      image:
-        data.images.length > 0
-          ? URL.createObjectURL(data.images[0])
-          : undefined,
-    };
-    setChatMessages((prev) => [...prev, userMessage]);
-
-    if (data.hasImages) {
-      setIsAnalyzing(true);
-
-      // Add analyzing message
-      const analyzingMessage: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: "I'm analyzing your image with GPT-4.0 to create a product listing. This will cost 10 credits...",
-      };
-      setChatMessages((prev) => [...prev, analyzingMessage]);
-
-      try {
-        // Import analysis functions
-        const { analyzeImageWithFallback, fileToBase64 } = await import(
-          "@/service/api/openaiService"
-        );
-
-        const analysisPromises = data.images.map(async (file) => {
-          // Convert image to base64
-          const imageBase64 = await fileToBase64(file, "auto");
-
-          // Analyze with AI
-          const listing = await analyzeImageWithFallback(file, data.text);
-
-          // Attach base64 image data
-          return {
-            ...listing,
-            imageBase64: imageBase64,
-          };
-        });
-
-        const results = await Promise.all(analysisPromises);
-
-        // Add result messages
-        results.forEach((listing, index) => {
-          const resultMessage: ChatMessage = {
-            id: Date.now() + 2 + index,
-            sender: "bot",
-            text: `✅ GPT-4.0 analysis complete! Here's your generated product listing:`,
-            productListing: listing,
-          };
-
-          setChatMessages((prev) => [...prev, resultMessage]);
-        });
-      } catch (error) {
-        let errorText = "Sorry, I couldn't analyze the image with GPT-4.0.";
-
-        if (error instanceof Error) {
-          if (error.message.includes("template prices")) {
-            errorText =
-              "⚠️ AI tried to use template prices instead of analyzing your actual product. Let me retry with a more specific approach...";
-          } else {
-            errorText = `Sorry, I couldn't analyze the image. Error: ${error.message}. Please try again with a clearer image or check your connection.`;
-          }
-        }
-
-        const errorMessage: ChatMessage = {
-          id: Date.now() + 2,
-          sender: "bot",
-          text: errorText,
-        };
-        setChatMessages((prev) => [...prev, errorMessage]);
-      } finally {
-        setIsAnalyzing(false);
-      }
+  // Helper function to map UI condition to backend format
+  const mapConditionToBackend = (condition: string): string => {
+    switch (condition) {
+      case "Excellent":
+        return "LIKE_NEW";
+      case "Good":
+        return "GOOD";
+      case "Fair":
+        return "FAIR";
+      case "Poor":
+        return "POOR";
+      default:
+        return "GOOD";
     }
   };
 
   return (
     <ProtectedRoute>
       <MainLayout>
-        {isChatOpen ? (
-          <div className="flex flex-col h-full justify-center w-full">
-            <UIChat
-              messages={chatMessages}
-              isAnalyzing={isAnalyzing}
-              onSendMessage={handleSendMessage}
-              onCreateProduct={handleCreateProduct}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col h-full justify-center w-full">
-            {/* Header */}
-            <div className="flex flex-col justify-center items-center">
-              <ChatIcon width={64} height={64} className="text-blue-500" />
-              <h1 className="text-center text-2xl font-semibold mb-2 text-black">
-                Hi, Ryan
-                <br />
-                <span className="font-normal">
-                  Upload a photo and let me create your product listing
-                </span>
-              </h1>
+        <div className="flex flex-col h-full w-full max-w-5xl mx-auto">
+          <div className="flex flex-1 gap-4 p-4 min-h-0">
+            {/* Main Content Wrapper - with proper flex layout */}
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* Chat Content - with proper scrolling */}
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto pb-4 min-h-0"
+              >
+                {!isChatOpen ? (
+                  <div className="flex flex-col h-full justify-center items-center py-20">
+                    {/* Welcome Header */}
+                    <div className="flex flex-col justify-center items-center mb-6">
+                      <ChatIcon className="text-purple-500 mb-4" />
+                      <h1 className="text-center text-2xl font-semibold mb-2 text-black">
+                        Hi, User
+                        <br />
+                        <span className="font-normal text-gray-600">
+                          Upload a photo and let me create your product listing
+                        </span>
+                      </h1>
+                    </div>
+                  </div>
+                ) : (
+                  <Chat messages={messages} isLoading={isLoading} />
+                )}
+              </div>
+
+              {/* Chat Input - not fixed, but at the bottom of the flexbox */}
+              <div className="mt-auto pt-4 border-t border-gray-100">
+                <ChatInput
+                  onSubmit={(text, imageFiles) =>
+                    handleSubmit(text, imageFiles)
+                  }
+                  isLoading={isLoading}
+                />
+                {error && (
+                  <p className="text-red-500 text-xs mt-1 px-2">{error}</p>
+                )}
+              </div>
             </div>
 
-            {/* ChatInput full width */}
-            <div className="w-full mt-4">
-              <ChatInput onSubmit={handleChatSubmit} />
-            </div>
+            {/* Product Listing Card Section */}
+            {productListing && (
+              <div className="w-80 hidden md:block">
+                <ProductListingCard
+                  listing={productListing}
+                  isUpdated={isUpdated}
+                  onCreateProduct={createProduct}
+                  isLoading={isCreatingProduct}
+                />
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Mobile Product Card (shown when exists) */}
+          {productListing && (
+            <div className="block md:hidden px-4 mb-4">
+              <ProductListingCard
+                listing={productListing}
+                isUpdated={isUpdated}
+                onCreateProduct={createProduct}
+                isLoading={isCreatingProduct}
+              />
+            </div>
+          )}
+        </div>
       </MainLayout>
     </ProtectedRoute>
   );
