@@ -342,7 +342,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                     <div className="mt-8 grid lg:grid-cols-2 gap-8">
                         {/* Description */}
                         <div>
-                            <h2 className="text-xl font-semibold mb-4">Description</h2>
+                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Description</h2>
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-gray-700 whitespace-pre-wrap">
                                     {product.description}
@@ -352,7 +352,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Key Selling Points */}
                             {product.keySellingPoints && product.keySellingPoints.length > 0 && (
                                 <div className="mt-6">
-                                    <h3 className="text-lg font-semibold mb-3">Key Selling Points</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Key Selling Points</h3>
                                     <ul className="space-y-2">
                                         {product.keySellingPoints.map((point, index) => (
                                             <li key={index} className="flex items-start gap-2">
@@ -367,7 +367,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Known Flaws */}
                             {product.knownFlaws && (
                                 <div className="mt-6">
-                                    <h3 className="text-lg font-semibold mb-3">Known Issues</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Known Issues</h3>
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                         <p className="text-gray-700">{product.knownFlaws}</p>
                                     </div>
@@ -380,7 +380,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Reason for Selling */}
                             {product.reasonForSelling && (
                                 <div>
-                                    <h3 className="text-lg font-semibold mb-3">Reason for Selling</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Reason for Selling</h3>
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <p className="text-gray-700">{product.reasonForSelling}</p>
                                     </div>
@@ -390,7 +390,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Pickup/Delivery Info */}
                             {product.pickupDeliveryInfo && (
                                 <div>
-                                    <h3 className="text-lg font-semibold mb-3">Pickup & Delivery</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Pickup & Delivery</h3>
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <p className="text-gray-700">{product.pickupDeliveryInfo}</p>
                                     </div>
@@ -400,7 +400,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Price Information */}
                             {product.targetPrice && (
                                 <div>
-                                    <h3 className="text-lg font-semibold mb-3">Price Information</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Price Information</h3>
                                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Current Price:</span>

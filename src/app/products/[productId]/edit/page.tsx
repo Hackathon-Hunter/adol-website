@@ -196,7 +196,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Product Image */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-4">Product Image</h3>
+                            <h3 className="text-lg font-semibold mb-4 text-gray-700">Product Image</h3>
                             <div className="flex items-center gap-6">
                                 {formData.imageUrl && (
                                     <div className="relative">
@@ -232,7 +232,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
 
                         {/* Basic Information */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+                            <h3 className="text-lg font-semibold mb-4 text-gray-700">Basic Information</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -375,7 +375,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
 
                         {/* Description */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-4">Description</h3>
+                            <h3 className="text-lg font-semibold mb-4 text-gray-700">Description</h3>
                             <textarea
                                 name="description"
                                 value={formData.description}
