@@ -30,82 +30,81 @@ export interface AIResponse {
 const messages: ChatCompletionMessageParam[] = [];
 let productListing: ProductListing | null = null;
 
-const IMAGE_ANALYSIS_SYSTEM_PROMPT = `Anda adalah AI ahli marketplace yang menganalisis foto produk dan membuat listing lengkap.
-ANALISIS FOTO dengan teliti dan berikan estimasi harga yang REALISTIS berdasarkan produk yang terlihat dalam gambar.
-Berdasarkan foto, buat data produk dalam format JSON yang valid:
+const IMAGE_ANALYSIS_SYSTEM_PROMPT = `You are an expert marketplace AI that analyzes product photos and creates comprehensive listings.
+ANALYZE PHOTOS carefully and provide REALISTIC price estimates based on the products visible in the image.
+Based on the photo, create product data in valid JSON format:
 {
  product_listing: {
- "item_name": "Nama produk dengan brand/model jika terlihat",
- "category": "Kategori produk (motor, elektronik, furniture, dll)",
- "description": "Deskripsi lengkap dan menarik produk",
+ "item_name": "Product name with brand/model if visible",
+ "category": "Product category (motorcycle, electronics, furniture, etc.)",
+ "description": "Complete and attractive product description",
  "condition": "Excellent/Good/Fair/Poor",
- "listing_price": [HARGA_REALISTIS_BERDASARKAN_PRODUK],
- "target_price": [85%_DARI_LISTING_PRICE],
- "minimum_price": [70%_DARI_LISTING_PRICE],
- "selling_points": "3-5 poin menarik untuk pembeli",
- "known_flaws": "Masalah/kerusakan yang terlihat dari foto",
- "reason_selling": "Tebakan alasan menjual yang masuk akal",
- "delivery_info": "Info pengambilan/pengiriman"
+ "listing_price": [REALISTIC_PRICE_BASED_ON_PRODUCT],
+ "target_price": [85%_OF_LISTING_PRICE],
+ "minimum_price": [70%_OF_LISTING_PRICE],
+ "selling_points": "3-5 attractive points for buyers",
+ "known_flaws": "Issues/damage visible from photo",
+ "reason_selling": "Reasonable guess for selling reason",
+ "delivery_info": "Pickup/delivery information"
  },
- message: "Penjelasan atau pertanyaan atau konfirmasi untuk pengguna"
+ message: "Explanation or question or confirmation for user"
 }
-KRITERIA PENTING:
-- Harga dalam Rupiah (angka saja, tanpa titik/koma)
-- Target price = 85% dari listing price
-- Minimum price = 70% dari listing price
-- Analisis kondisi dari foto secara jujur dan detail
-- Berikan harga yang masuk akal untuk produk yang terlihat di foto
-- Pertimbangkan kondisi, merek, model, dan usia produk dari gambar
-- JANGAN gunakan harga template - berikan estimasi harga pasar yang nyata
-- Jika user memberikan notes tambahan, pertimbangkan dalam analisis
--- Respons berdasarkan bahasa pengguna`;
+IMPORTANT CRITERIA:
+- Price in local currency (numbers only, no dots/commas)
+- Target price = 85% of listing price
+- Minimum price = 70% of listing price
+- Analyze condition from photo honestly and in detail
+- Provide reasonable prices for the product visible in photo
+- Consider condition, brand, model, and product age from image
+- DON'T use template prices - provide real market price estimates
+- If user provides additional notes, consider them in analysis
+- Must respond in the same language as the prompt message whether it's Indonesian, English, or other languages`;
 
-const CHAT_SYSTEM_PROMPT = `Anda adalah asisten AI marketplace yang membantu pengguna mengelola dan menyempurnakan product listing.
-KONTEKS PRODUK SAAT INI:
+const CHAT_SYSTEM_PROMPT = `You are a marketplace AI assistant that helps users manage and improve product listings.
+CURRENT PRODUCT CONTEXT:
 ${
   productListing
     ? JSON.stringify(productListing, null, 2)
-    : "Tidak ada produk yang sedang diedit"
+    : "No product currently being edited"
 }
-TUGAS ANDA:
-1. Membantu pengguna menyempurnakan detail produk
-2. Menjawab pertanyaan tentang harga, deskripsi, atau kondisi
-3. Memberikan saran untuk meningkatkan daya tarik listing
-4. Memproses permintaan perubahan detail produk
-ATURAN RESPONS:
-- Jika pengguna ingin mengubah detail produk, WAJIB berikan respons dalam format JSON:
+YOUR TASKS:
+1. Help users improve product details
+2. Answer questions about pricing, description, or condition
+3. Provide suggestions to increase listing attractiveness
+4. Process requests for product detail changes
+RESPONSE RULES:
+- If user wants to change product details, MUST provide response in JSON format:
 {
  "type": "update_product",
  "changes": {
  "field_name": "new_value"
  },
- "message": "Penjelasan perubahan untuk pengguna"
+ "message": "Explanation of changes for user"
 }
-- PENTING: Setiap kali ada perubahan produk, SELALU tampilkan JSON update DAN pesan konfirmasi
-- Untuk percakapan biasa, berikan respons teks normal
-- Selalu gunakan bahasa Indonesia yang ramah dan profesional
-- Berikan saran konstruktif untuk meningkatkan listing
-- Respons berdasarkan bahasa pengguna
-FORMAT FIELD YANG BISA DIUBAH:
+- IMPORTANT: Whenever there are product changes, ALWAYS display JSON update AND confirmation message
+- For regular conversation, provide normal text response
+- Give constructive suggestions to improve listing
+- Must respond in the same language as the prompt message whether it's Indonesian, English, or other languages
+UPDATABLE FIELD FORMATS:
 - item_name: string
 - category: string
 - description: string
 - condition: "Excellent" | "Good" | "Fair" | "Poor"
 - listing_price: number
-- target_price: number (otomatis 85% dari listing_price)
-- minimum_price: number (otomatis 70% dari listing_price)
+- target_price: number (automatically 85% of listing_price)
+- minimum_price: number (automatically 70% of listing_price)
 - selling_points: string
 - known_flaws: string
 - reason_selling: string
 - delivery_info: string
-CONTOH RESPONS UPDATE:
-Ketika pengguna ingin mengubah alasan jual:
+UPDATE RESPONSE EXAMPLE:
+When user wants to change selling reason:
 {
  "type": "update_product",
  "changes": {
- "reason_selling": "Sudah tidak dipakai"
+ "reason_selling": "No longer needed"
  },
- "message": "Alasan penjualan telah diubah menjadi 'Sudah tidak dipakai'."
+ "message": "Selling reason has been updated to 'No longer needed'."
 }`;
 
 /**
@@ -249,7 +248,7 @@ export const sendMessageWithImage = async (
   userNotes: string = ""
 ): Promise<AIResponse> => {
   try {
-    const userPrompt = `Analisis foto produk ini dan buat listing marketplace lengkap.\n\nCatatan user: ${userNotes}`;
+    const userPrompt = `Analyze this product photo and create a complete marketplace listing.\n\nUser notes: ${userNotes}`;
 
     const response = await client.chat.completions.create({
       model: "openai/gpt-4o",
@@ -321,7 +320,7 @@ export const sendMessageWithImage = async (
       return {
         productListing: null,
         message:
-          "Maaf, terjadi kesalahan saat menganalisis gambar. Mohon coba lagi.",
+          "Sorry, there was an error analyzing the image. Please try again.",
       };
     }
 
@@ -356,13 +355,13 @@ export const sendMessageWithImage = async (
           productListing: productListing,
           message:
             content.replace(/```(?:json)?\s*[\s\S]*?```/, "").trim() ||
-            "Produk telah dianalisis dengan sukses!",
+            "Product analyzed successfully!",
         };
       } else {
         console.warn("Parsed JSON lacks expected structure:", parsedResponse);
         return {
           productListing: null,
-          message: "Format respons tidak sesuai. Mohon coba lagi.",
+          message: "Response format is incorrect. Please try again.",
         };
       }
     } catch (parseError) {
@@ -375,8 +374,7 @@ export const sendMessageWithImage = async (
 
       return {
         productListing: null,
-        message:
-          "Terjadi kesalahan dalam memproses respons. Silakan coba lagi.",
+        message: "Error processing response. Please try again.",
       };
     }
   } catch (error) {
@@ -410,10 +408,10 @@ export const sendMessageText = async (message: string): Promise<AIResponse> => {
     messages.push({ role: "user", content: message });
 
     const currentSystemPrompt = CHAT_SYSTEM_PROMPT.replace(
-      "${productListing ? JSON.stringify(productListing, null, 2) : 'Tidak ada produk yang sedang diedit'}",
+      "${productListing ? JSON.stringify(productListing, null, 2) : 'No product currently being edited'}",
       productListing
         ? JSON.stringify(productListing, null, 2)
-        : "Tidak ada produk yang sedang diedit"
+        : "No product currently being edited"
     );
 
     const conversationMessages: ChatCompletionMessageParam[] = [
@@ -504,14 +502,14 @@ export const sendMessageText = async (message: string): Promise<AIResponse> => {
 
             return {
               productListing: productListing,
-              message: jsonData.message || "Produk berhasil diperbarui.",
+              message: jsonData.message || "Product updated successfully.",
             };
           } catch (updateError) {
             console.error("Error applying product updates:", updateError);
             return {
               productListing: productListing,
               message:
-                "Terjadi kesalahan saat memperbarui produk. Detail: " +
+                "Error updating product. Details: " +
                 (updateError instanceof Error
                   ? updateError.message
                   : "Unknown error"),
@@ -537,7 +535,7 @@ export const sendMessageText = async (message: string): Promise<AIResponse> => {
 
           return {
             productListing: productListing,
-            message: "Produk telah diperbarui dengan detail lengkap!",
+            message: "Product updated with complete details!",
           };
         }
       } catch (jsonError) {
