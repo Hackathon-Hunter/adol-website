@@ -7,6 +7,7 @@ import MainLayout from "../../../layout/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
+import { AdolService } from "@/service/api/adolService";
 
 type ProductForm = {
     title: string;
@@ -17,7 +18,8 @@ type ProductForm = {
     condition: string;
     location: string;
     marketplace: string;
-    image: string;
+    imageUrl: string;
+    status: string;
 };
 
 interface EditProductPageProps {
@@ -40,7 +42,8 @@ export default function EditProductPage({ params }: EditProductPageProps) {
         condition: "",
         location: "",
         marketplace: "",
-        image: ""
+        imageUrl: "",
+        status: "active"
     });
 
     useEffect(() => {
@@ -56,24 +59,38 @@ export default function EditProductPage({ params }: EditProductPageProps) {
     useEffect(() => {
         if (!productId) return;
         
-        // Simulate loading existing product data
+        // Load actual product data from backend
         const loadProduct = async () => {
             setLoading(true);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Mock data - in real app, fetch from API
-            setFormData({
-                title: "Marshall Major IV Bluetooth Headphones",
-                price: "1850000",
-                minPrice: "1600000",
-                description: "Premium wireless headphones with exceptional sound quality. Perfect for music lovers and professionals. Includes original packaging and charging cable.",
-                category: "Electronics",
-                condition: "Like New",
-                location: "Jakarta, Indonesia",
-                marketplace: "Facebook Marketplace",
-                image: "https://upload.wikimedia.org/wikipedia/commons/6/6e/Marshall_Major_IV.jpg"
-            });
-            setLoading(false);
+            try {
+                const adolServiceInstance = new AdolService();
+                const product = await adolServiceInstance.getProduct(productId);
+                
+                if (product) {
+                    setFormData({
+                        title: product.name,
+                        price: product.price.toString(),
+                        minPrice: product.minimumPrice && product.minimumPrice.length > 0 ? 
+                               product.minimumPrice[0]?.toString() || product.price.toString() : product.price.toString(),
+                        description: product.description,
+                        category: product.categoryId.toString(),
+                        condition: product.condition,
+                        location: product.pickupDeliveryInfo,
+                        marketplace: "", // This field doesn't exist in backend
+                        imageUrl: (product.imageBase64 && product.imageBase64.length > 0 ? 
+                                product.imageBase64[0] : "") || "",
+                        status: product.status === true ? "active" : 
+                                typeof product.status === 'object' && product.status ? 
+                                Object.keys(product.status)[0] : "active"
+                    });
+                } else {
+                    console.error('Product not found');
+                }
+            } catch (error) {
+                console.error('Error loading product:', error);
+            } finally {
+                setLoading(false);
+            }
         };
 
         loadProduct();
@@ -91,11 +108,58 @@ export default function EditProductPage({ params }: EditProductPageProps) {
         e.preventDefault();
         setSaving(true);
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setSaving(false);
-        router.push(`/products/${productId}`);
+        try {
+            const adolServiceInstance = new AdolService();
+            await adolServiceInstance.initialize();
+            
+            // Get category ID if category name is provided
+            let categoryId: bigint | undefined;
+            if (formData.category) {
+                try {
+                    // Try to parse as BigInt first (in case it's already an ID)
+                    categoryId = BigInt(formData.category);
+                } catch {
+                    // If that fails, treat it as a category name and get the ID
+                    categoryId = await adolServiceInstance.getCategoryIdByName(formData.category);
+                }
+            }
+            
+            // Prepare update data with Candid format
+            const updateData = {
+                name: formData.title ? [formData.title] as [string] : [] as [],
+                description: formData.description ? [formData.description] as [string] : [] as [],
+                price: formData.price ? [BigInt(formData.price)] as [bigint] : [] as [],
+                stock: [] as [], // Not in form, keep empty
+                imageBase64: formData.imageUrl ? [formData.imageUrl] as [string] : [] as [],
+                categoryId: categoryId ? [categoryId] as [bigint] : [] as [],
+                condition: formData.condition ? [formData.condition] as [string] : [] as [],
+                keySellingPoints: [] as [], // Not in form, keep empty
+                knownFlaws: [] as [], // Not in form, keep empty
+                minimumPrice: formData.minPrice ? [BigInt(formData.minPrice)] as [bigint] : [] as [],
+                pickupDeliveryInfo: formData.location ? [formData.location] as [string] : [] as [],
+                reasonForSelling: [] as [], // Not in form, keep empty
+                targetPrice: [] as [], // Not in form, keep empty
+                status: formData.status ? [{ [formData.status]: null } as any] as [any] : [] as []
+            };
+            
+            console.log('Updating product:', productId, updateData);
+            
+            const result = await adolServiceInstance.updateProduct(productId, updateData);
+            
+            if (result) {
+                console.log('Product updated successfully:', result);
+                // Navigate back to the products list with a refresh indicator
+                router.push('/products?refresh=true');
+            } else {
+                console.error('Failed to update product:', result);
+                alert('Failed to update product. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error updating product:', error);
+            alert('Error updating product. Please try again.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -134,16 +198,16 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                         <div className="bg-white rounded-2xl p-6 shadow-sm border">
                             <h3 className="text-lg font-semibold mb-4">Product Image</h3>
                             <div className="flex items-center gap-6">
-                                {formData.image && (
+                                {formData.imageUrl && (
                                     <div className="relative">
                                         <img
-                                            src={formData.image}
+                                            src={formData.imageUrl}
                                             alt="Product"
                                             className="w-32 h-32 object-cover rounded-lg"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, image: "" }))}
+                                            onClick={() => setFormData(prev => ({ ...prev, imageUrl: "" }))}
                                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                         >
                                             <X size={16} />
@@ -156,10 +220,10 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                     </label>
                                     <input
                                         type="url"
-                                        name="image"
-                                        value={formData.image}
+                                        name="imageUrl"
+                                        value={formData.imageUrl}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                         placeholder="https://example.com/image.jpg"
                                     />
                                 </div>
@@ -169,8 +233,8 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                         {/* Basic Information */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border">
                             <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="md:col-span-2">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Product Title *
                                     </label>
@@ -180,7 +244,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         value={formData.title}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                         placeholder="Enter product title"
                                     />
                                 </div>
@@ -195,7 +259,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         value={formData.price}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                         placeholder="0"
                                     />
                                 </div>
@@ -210,7 +274,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         value={formData.minPrice}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                         placeholder="0"
                                     />
                                 </div>
@@ -224,7 +288,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         value={formData.category}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                     >
                                         <option value="">Select Category</option>
                                         <option value="Electronics">Electronics</option>
@@ -245,7 +309,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         value={formData.condition}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                     >
                                         <option value="">Select Condition</option>
                                         <option value="New">New</option>
@@ -266,7 +330,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         name="location"
                                         value={formData.location}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                         placeholder="City, Country"
                                     />
                                 </div>
@@ -279,7 +343,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         name="marketplace"
                                         value={formData.marketplace}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                     >
                                         <option value="">Select Marketplace</option>
                                         <option value="Facebook Marketplace">Facebook Marketplace</option>
@@ -288,6 +352,22 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                         <option value="Tokopedia">Tokopedia</option>
                                         <option value="Shopee">Shopee</option>
                                         <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Status
+                                    </label>
+                                    <select
+                                        name="status"
+                                        value={formData.status}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                                    >
+                                        <option value="active">Active</option>
+                                        <option value="draft">Draft</option>
+                                        <option value="sold">Sold</option>
                                     </select>
                                 </div>
                             </div>
@@ -301,7 +381,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                                 placeholder="Describe your product in detail..."
                             />
                         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Globe, Clock, MoreHorizontal, Store, RefreshCcw } from "lucide-react";
 import MainLayout from "../layout/MainLayout";
 import { getAdolService, type Product as BackendProduct } from "@/service/api/adolService";
@@ -24,6 +24,7 @@ interface Product {
 
 export default function ProductsPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { principal, isAuthenticated } = useAuth();
     const [filter, setFilter] = useState<"All" | "Live" | "Drafts" | "Sold">("All");
     const [products, setProducts] = useState<Product[]>([]);
@@ -32,13 +33,60 @@ export default function ProductsPage() {
 
     // Convert backend product to display format
     const convertBackendProduct = (backendProduct: BackendProduct): Product => {
+        // Debug: Log the actual product structure
+        console.log("Converting backend product:", backendProduct);
+        console.log("Product status field:", backendProduct.status, "Type:", typeof backendProduct.status);
+        
+        // Handle imageBase64 array format from backend
+        const imageUrl = (backendProduct.imageBase64 && backendProduct.imageBase64.length > 0) 
+            ? backendProduct.imageBase64[0] 
+            : "/assets/images/background.png";
+            
+        // Convert backend status variant to display status
+        const getDisplayStatus = (status: any): "Live" | "Drafts" | "Sold" => {
+            // Handle case where status is undefined or null
+            if (!status) return "Drafts";
+            
+            // Handle array format: [] | [variant]
+            if (Array.isArray(status)) {
+                if (status.length === 0) return "Drafts";
+                
+                const statusVariant = status[0];
+                if (!statusVariant || typeof statusVariant !== 'object') return "Drafts";
+                
+                if ('active' in statusVariant) return "Live";
+                if ('sold' in statusVariant) return "Sold";
+                if ('draft' in statusVariant) return "Drafts";
+                return "Drafts";
+            }
+            
+            // Handle direct variant object format
+            if (typeof status === 'object') {
+                if ('active' in status) return "Live";
+                if ('sold' in status) return "Sold";
+                if ('draft' in status) return "Drafts";
+            }
+            
+            // Handle string format (fallback)
+            if (typeof status === 'string') {
+                switch (status.toLowerCase()) {
+                    case "active": return "Live";
+                    case "sold": return "Sold";
+                    case "draft": return "Drafts";
+                    default: return "Drafts";
+                }
+            }
+            
+            return "Drafts";
+        };
+            
         return {
             id: backendProduct.id,
             name: backendProduct.name,
             description: backendProduct.description,
             price: Number(backendProduct.price),
-            image: backendProduct.imageBase64 || "/assets/images/background.png",
-            status: backendProduct.isActive ? "Live" : "Drafts",
+            image: imageUrl || "/assets/images/background.png", // Ensure it's never undefined
+            status: getDisplayStatus(backendProduct.status),
             views: 0, // Backend doesn't have views yet
             likes: 0, // Backend doesn't have likes yet
             date: new Date(Number(backendProduct.createdAt) / 1000000).toLocaleDateString(),
@@ -47,7 +95,14 @@ export default function ProductsPage() {
         };
     };
 
-    // Load products from backend - show all products if not authenticated, user's products if authenticated
+    // Reset filter to "All" when user logs out
+    useEffect(() => {
+        if (!isAuthenticated && filter !== "All") {
+            setFilter("All");
+        }
+    }, [isAuthenticated, filter]);
+
+    // Load products from backend based on the selected filter
     useEffect(() => {
         const loadProducts = async () => {
             try {
@@ -56,10 +111,38 @@ export default function ProductsPage() {
                 const adolService = await getAdolService();
                 
                 let fetchedProducts: BackendProduct[] = [];
+                
                 if (isAuthenticated && principal) {
-                    // Show only user's products if authenticated
-                    fetchedProducts = await adolService.getMyProducts();
-                    console.log("User products:", fetchedProducts);
+                    // For authenticated users, use specific methods based on filter
+                    switch (filter) {
+                        case "All":
+                            fetchedProducts = await adolService.getMyProducts();
+                            break;
+                        case "Live":
+                            // Get all user products and filter for active ones
+                            const allUserProducts = await adolService.getMyProducts();
+                            fetchedProducts = allUserProducts.filter(product => {
+                                const status = product.status;
+                                if (Array.isArray(status) && status.length > 0) {
+                                    const statusVariant = status[0];
+                                    return statusVariant && typeof statusVariant === 'object' && 'active' in statusVariant;
+                                }
+                                if (typeof status === 'object' && status && 'active' in status) {
+                                    return true;
+                                }
+                                return false;
+                            });
+                            break;
+                        case "Drafts":
+                            fetchedProducts = await adolService.getDraftProducts();
+                            break;
+                        case "Sold":
+                            fetchedProducts = await adolService.getSoldProducts();
+                            break;
+                        default:
+                            fetchedProducts = await adolService.getMyProducts();
+                    }
+                    console.log(`${filter} products:`, fetchedProducts);
                 } else {
                     // Show all products if not authenticated
                     fetchedProducts = await adolService.getProducts();
@@ -77,7 +160,70 @@ export default function ProductsPage() {
         };
 
         loadProducts();
-    }, [isAuthenticated, principal]);
+    }, [isAuthenticated, principal, filter]);
+
+    // Handle refresh parameter from URL
+    useEffect(() => {
+        const refresh = searchParams.get('refresh');
+        if (refresh === 'true') {
+            // Clear the refresh parameter and refresh the products
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('refresh');
+            window.history.replaceState({}, '', newUrl.toString());
+            
+            // Force refresh products using current filter
+            const forceRefresh = async () => {
+                try {
+                    setLoading(true);
+                    const adolService = await getAdolService();
+                    
+                    let fetchedProducts: BackendProduct[] = [];
+                    
+                    if (isAuthenticated && principal) {
+                        // Use filter-specific methods for authenticated users
+                        switch (filter) {
+                            case "All":
+                                fetchedProducts = await adolService.getMyProducts();
+                                break;
+                            case "Live":
+                                const allUserProducts = await adolService.getMyProducts();
+                                fetchedProducts = allUserProducts.filter(product => {
+                                    const status = product.status;
+                                    if (Array.isArray(status) && status.length > 0) {
+                                        const statusVariant = status[0];
+                                        return statusVariant && typeof statusVariant === 'object' && 'active' in statusVariant;
+                                    }
+                                    if (typeof status === 'object' && status && 'active' in status) {
+                                        return true;
+                                    }
+                                    return false;
+                                });
+                                break;
+                            case "Drafts":
+                                fetchedProducts = await adolService.getDraftProducts();
+                                break;
+                            case "Sold":
+                                fetchedProducts = await adolService.getSoldProducts();
+                                break;
+                            default:
+                                fetchedProducts = await adolService.getMyProducts();
+                        }
+                    } else {
+                        fetchedProducts = await adolService.getProducts();
+                    }
+                    
+                    const convertedProducts = fetchedProducts.map(convertBackendProduct);
+                    setProducts(convertedProducts);
+                } catch (err) {
+                    console.error("Failed to refresh products:", err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            forceRefresh();
+        }
+    }, [searchParams, isAuthenticated, principal, filter]);
 
     const refreshProducts = async () => {
         try {
@@ -85,9 +231,36 @@ export default function ProductsPage() {
             const adolService = await getAdolService();
             
             let fetchedProducts: BackendProduct[] = [];
+            
             if (isAuthenticated && principal) {
-                // Refresh user's products if authenticated
-                fetchedProducts = await adolService.getMyProducts();
+                // Use filter-specific methods for authenticated users
+                switch (filter) {
+                    case "All":
+                        fetchedProducts = await adolService.getMyProducts();
+                        break;
+                    case "Live":
+                        const allUserProducts = await adolService.getMyProducts();
+                        fetchedProducts = allUserProducts.filter(product => {
+                            const status = product.status;
+                            if (Array.isArray(status) && status.length > 0) {
+                                const statusVariant = status[0];
+                                return statusVariant && typeof statusVariant === 'object' && 'active' in statusVariant;
+                            }
+                            if (typeof status === 'object' && status && 'active' in status) {
+                                return true;
+                            }
+                            return false;
+                        });
+                        break;
+                    case "Drafts":
+                        fetchedProducts = await adolService.getDraftProducts();
+                        break;
+                    case "Sold":
+                        fetchedProducts = await adolService.getSoldProducts();
+                        break;
+                    default:
+                        fetchedProducts = await adolService.getMyProducts();
+                }
             } else {
                 // Refresh all products if not authenticated
                 fetchedProducts = await adolService.getProducts();
@@ -103,7 +276,8 @@ export default function ProductsPage() {
         }
     };
 
-    const filtered = filter === "All" ? products : products.filter((p: Product) => p.status === filter);
+    // No need for frontend filtering since we're getting filtered data from backend
+    const filtered = products;
 
     const handleProductClick = (productId: string) => {
         router.push(`/products/${productId}`);
@@ -136,9 +310,9 @@ export default function ProductsPage() {
                     </div>
                 )}
 
-                {/* Tabs */}
+                {/* Tabs - Show all tabs only for authenticated users */}
                 <div className="flex gap-3 mb-6">
-                    {["All", "Live", "Drafts", "Sold"].map((tab) => (
+                    {(isAuthenticated ? ["All", "Live", "Drafts", "Sold"] : ["All"]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setFilter(tab as any)}
@@ -179,7 +353,10 @@ export default function ProductsPage() {
                         <Store className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 text-lg mb-2">No products found</p>
                         <p className="text-gray-500">
-                            {filter === "All" ? "You haven't created any products yet." : `No ${filter.toLowerCase()} products found.`}
+                            {isAuthenticated 
+                                ? (filter === "All" ? "You haven't created any products yet." : `No ${filter.toLowerCase()} products found.`)
+                                : "No products available at the moment."
+                            }
                         </p>
                     </div>
                 )}

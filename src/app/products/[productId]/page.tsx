@@ -99,10 +99,50 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
         }
     };
 
-    const getStatusColor = (isActive: boolean) => {
-        return isActive 
-            ? "bg-green-100 text-green-700" 
-            : "bg-gray-100 text-gray-700";
+    const getStatusColor = (status: any) => {
+        if (!status) return "bg-gray-100 text-gray-700";
+        
+        // Handle array format [{ active: null }] or [{ sold: null }]
+        if (Array.isArray(status) && status.length > 0) {
+            const statusVariant = status[0];
+            if (statusVariant && typeof statusVariant === 'object') {
+                if ('active' in statusVariant) return "bg-green-100 text-green-700";
+                if ('sold' in statusVariant) return "bg-red-100 text-red-700";
+                if ('draft' in statusVariant) return "bg-gray-100 text-gray-700";
+            }
+        }
+        
+        // Handle direct variant object format { active: null }
+        if (typeof status === 'object') {
+            if ('active' in status) return "bg-green-100 text-green-700";
+            if ('sold' in status) return "bg-red-100 text-red-700";
+            if ('draft' in status) return "bg-gray-100 text-gray-700";
+        }
+        
+        return "bg-gray-100 text-gray-700";
+    };
+
+    const getStatusText = (status: any) => {
+        if (!status) return "Draft";
+        
+        // Handle array format [{ active: null }] or [{ sold: null }]
+        if (Array.isArray(status) && status.length > 0) {
+            const statusVariant = status[0];
+            if (statusVariant && typeof statusVariant === 'object') {
+                if ('active' in statusVariant) return "Active";
+                if ('sold' in statusVariant) return "Sold";
+                if ('draft' in statusVariant) return "Draft";
+            }
+        }
+        
+        // Handle direct variant object format { active: null }
+        if (typeof status === 'object') {
+            if ('active' in status) return "Active";
+            if ('sold' in status) return "Sold";
+            if ('draft' in status) return "Draft";
+        }
+        
+        return "Draft";
     };
 
     const formatDate = (timestamp: bigint) => {
@@ -202,7 +242,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                         <div className="space-y-4">
                             <div className="relative">
                                 <img
-                                    src={product.imageBase64 || "/assets/images/background.png"}
+                                    src={
+                                        (product.imageBase64 && Array.isArray(product.imageBase64) && product.imageBase64.length > 0) 
+                                            ? product.imageBase64[0] 
+                                            : "/assets/images/background.png"
+                                    }
                                     alt={product.name}
                                     className="w-full h-96 object-cover rounded-lg"
                                     onError={(e) => {
@@ -210,8 +254,8 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                                     }}
                                 />
                                 <div className="absolute top-4 left-4 flex gap-2">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(product.isActive)}`}>
-                                        {product.isActive ? "Live" : "Inactive"}
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(product.status)}`}>
+                                        {getStatusText(product.status)}
                                     </span>
                                 </div>
                             </div>

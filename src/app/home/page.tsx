@@ -13,24 +13,7 @@ import {
   fileToBase64,
 } from "@/service/api/openaiService";
 import { ChatIcon } from "@/components/icons";
-import { getAdolService } from "@/service/api/adolService";
-
-// Import the ProductInput interface
-interface ProductInput {
-  name: string;
-  description: string;
-  price: bigint;
-  stock: bigint;
-  imageBase64: [] | [string]; // Image data as base64 string
-  categoryId: bigint; // Backend expects bigint, not string
-  condition: string;
-  keySellingPoints: string[];
-  knownFlaws: string;
-  minimumPrice: [] | [bigint]; // Candid optional format
-  pickupDeliveryInfo: string;
-  reasonForSelling: string;
-  targetPrice: [] | [bigint]; // Candid optional format
-}
+import { getAdolService, type ProductInput as BackendProductInput } from "@/service/api/adolService";
 
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -55,8 +38,6 @@ export default function Home() {
       text: "Hi! Upload a photo of your product and I'll create a listing for you.",
     },
   ]);
-
-  const adolService = getAdolService();
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -174,45 +155,44 @@ export default function Home() {
     setIsCreatingProduct(true);
 
     try {
-      // Parse selling points into an array
-      const keySellingPoints = listing.selling_points
-        .split("\n")
-        .map((point) => point.replace(/^[•\-\*]\s*/, "").trim())
-        .filter((point) => point.length > 0);
-
-      // Convert prices to bigint for backend
-      const listingPrice = BigInt(listing.listing_price);
-      const targetPrice = BigInt(listing.target_price);
-      const minimumPrice = BigInt(listing.minimum_price);
-
-      // Convert category to bigint ID
-      const categoryId = BigInt(1); // Hardcoded default category ID
-
-      // Prepare product input matching the backend interface
-      const productInput: ProductInput = {
-        name: listing.item_name,
-        description: listing.description,
-        price: listingPrice,
-        stock: BigInt(1), // Default to 1 item in stock
-        imageBase64: listing.imageBase64 ? [listing.imageBase64] : [],
-        categoryId: categoryId,
-        condition: mapConditionToBackend(listing.condition),
-        keySellingPoints:
-          keySellingPoints.length > 0
-            ? keySellingPoints
-            : ["Good quality product"],
-        knownFlaws: listing.known_flaws || "None reported",
-        minimumPrice: [minimumPrice],
-        pickupDeliveryInfo:
-          listing.delivery_info ||
-          "Pickup and delivery available, contact seller for details.",
-        reasonForSelling:
-          listing.reason_selling || "Upgrading to a newer model",
-        targetPrice: [targetPrice],
+      // Get the service instance
+      const adolService = await getAdolService();
+      
+      // Get or create category ID dynamically from backend
+      const categoryId = await adolService.getCategoryIdByName(listing.category || "general");
+      
+      // Utility function to convert selling points to string array
+      const parseSellingPoints = (sellingPoints: any): string[] => {
+        if (!sellingPoints) return [];
+        if (Array.isArray(sellingPoints)) return sellingPoints.filter(point => point && point.trim());
+        if (typeof sellingPoints === 'string') return sellingPoints.split('\n').filter(point => point && point.trim());
+        return [String(sellingPoints)]; // Convert to string if unknown type
       };
 
-      // Call the service to create the product
-      const result = await (await adolService).createProduct(productInput);
+      // Map ProductListing to ProductInput format with validation
+      const productInput: BackendProductInput = {
+        categoryId: categoryId,
+        status: [{ active: null }],
+        keySellingPoints: parseSellingPoints(listing.selling_points),
+        name: listing.item_name || "Untitled Product",
+        minimumPrice: listing.minimum_price ? [BigInt(Math.max(1, listing.minimum_price))] : [],
+        reasonForSelling: listing.reason_selling || "Not specified",
+        targetPrice: listing.target_price ? [BigInt(Math.max(1, listing.target_price))] : [],
+        description: listing.description || "No description provided",
+        stock: BigInt(1),
+        imageBase64: (listing.imageBase64 && listing.imageBase64.startsWith('data:image/')) ? [listing.imageBase64] : [],
+        pickupDeliveryInfo: listing.delivery_info || "Contact seller for details",
+        knownFlaws: listing.known_flaws || "None reported",
+        price: BigInt(Math.max(1, listing.listing_price || 1)),
+        condition: listing.condition || "used"
+      };
+
+      console.log('Creating product with data:', {
+        ...productInput,
+        imageBase64: productInput.imageBase64.length > 0 ? `[base64 data: ${productInput.imageBase64[0]?.substring(0, 50)}...]` : 'No image data'
+      });
+      
+      const result = await adolService.createProduct(productInput);
 
       if (result) {
         // Success - add success message to chat
@@ -251,6 +231,22 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error creating product:", error);
+      
+      let errorText = "❌ Gagal membuat listing: ";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("session has expired") || error.message.includes("Invalid signature")) {
+          errorText += "Sesi Anda telah berakhir. Silakan login kembali untuk melanjutkan.";
+        } else if (error.message.includes("fetch")) {
+          errorText += "Tidak dapat terhubung ke backend. Periksa koneksi internet Anda.";
+        } else if (error.message.includes("auth")) {
+          errorText += "Masalah autentikasi. Silakan login kembali.";
+        } else {
+          errorText += error.message;
+        }
+      } else {
+        errorText += "Terjadi kesalahan tidak terduga. Silakan coba lagi.";
+      }
 
       // Add error message to chat
       setMessages((prev) => [
@@ -258,11 +254,7 @@ export default function Home() {
         {
           id: prev.length + 1,
           sender: "bot",
-          text: `❌ Terjadi kesalahan: ${
-            error instanceof Error
-              ? error.message
-              : "Kesalahan tidak terduga saat membuat produk Anda. Silakan coba lagi nanti."
-          }`,
+          text: errorText,
         },
       ]);
     } finally {
@@ -273,22 +265,6 @@ export default function Home() {
         chatContainerRef.current.scrollTop =
           chatContainerRef.current.scrollHeight;
       }
-    }
-  };
-
-  // Helper function to map UI condition to backend format
-  const mapConditionToBackend = (condition: string): string => {
-    switch (condition) {
-      case "Excellent":
-        return "LIKE_NEW";
-      case "Good":
-        return "GOOD";
-      case "Fair":
-        return "FAIR";
-      case "Poor":
-        return "POOR";
-      default:
-        return "GOOD";
     }
   };
 

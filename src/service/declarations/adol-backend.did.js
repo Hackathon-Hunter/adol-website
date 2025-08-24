@@ -109,8 +109,14 @@ export const idlFactory = ({ IDL }) => {
     'shippingAddress' : Address,
     'items' : IDL.Vec(OrderItemInput),
   });
+  const ProductStatus = IDL.Variant({
+    'active' : IDL.Null,
+    'sold' : IDL.Null,
+    'draft' : IDL.Null,
+  });
   const ProductInput = IDL.Record({
     'categoryId' : CategoryId,
+    'status' : IDL.Opt(ProductStatus),
     'keySellingPoints' : IDL.Vec(IDL.Text),
     'name' : IDL.Text,
     'minimumPrice' : IDL.Opt(IDL.Nat),
@@ -127,6 +133,7 @@ export const idlFactory = ({ IDL }) => {
   const Product = IDL.Record({
     'id' : ProductId,
     'categoryId' : CategoryId,
+    'status' : ProductStatus,
     'keySellingPoints' : IDL.Vec(IDL.Text),
     'name' : IDL.Text,
     'createdAt' : IDL.Int,
@@ -135,7 +142,6 @@ export const idlFactory = ({ IDL }) => {
     'reasonForSelling' : IDL.Text,
     'targetPrice' : IDL.Opt(IDL.Nat),
     'description' : IDL.Text,
-    'isActive' : IDL.Bool,
     'updatedAt' : IDL.Int,
     'stock' : IDL.Nat,
     'imageBase64' : IDL.Opt(IDL.Text),
@@ -322,13 +328,13 @@ export const idlFactory = ({ IDL }) => {
   });
   const ProductUpdate = IDL.Record({
     'categoryId' : IDL.Opt(CategoryId),
+    'status' : IDL.Opt(ProductStatus),
     'keySellingPoints' : IDL.Opt(IDL.Vec(IDL.Text)),
     'name' : IDL.Opt(IDL.Text),
     'minimumPrice' : IDL.Opt(IDL.Nat),
     'reasonForSelling' : IDL.Opt(IDL.Text),
     'targetPrice' : IDL.Opt(IDL.Nat),
     'description' : IDL.Opt(IDL.Text),
-    'isActive' : IDL.Opt(IDL.Bool),
     'stock' : IDL.Opt(IDL.Nat),
     'imageBase64' : IDL.Opt(IDL.Text),
     'pickupDeliveryInfo' : IDL.Opt(IDL.Text),
@@ -361,13 +367,14 @@ export const idlFactory = ({ IDL }) => {
     'getAllMatches' : IDL.Func([], [IDL.Vec(PotentialMatch)], []),
     'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], []),
     'getAllPayments' : IDL.Func([], [IDL.Vec(Payment)], []),
-    'getAllProducts' : IDL.Func([], [IDL.Vec(Product)], []),
+    'getAllProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'getAllSellerProfiles' : IDL.Func([], [IDL.Vec(SellerProfile)], []),
     'getAllUsers' : IDL.Func([], [IDL.Vec(User)], []),
     'getBalance' : IDL.Func([], [Result_7], []),
     'getBuyerProfile' : IDL.Func([], [Result_4], []),
     'getBuyerProfileById' : IDL.Func([BuyerId], [Result_4], []),
     'getCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+    'getDraftProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'getInfo' : IDL.Func(
         [],
         [
@@ -395,6 +402,7 @@ export const idlFactory = ({ IDL }) => {
     'getMyMatches' : IDL.Func([], [IDL.Vec(PotentialMatch)], []),
     'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], []),
     'getMyPayments' : IDL.Func([], [IDL.Vec(Payment)], []),
+    'getMyProducts' : IDL.Func([], [IDL.Vec(Product)], []),
     'getOrder' : IDL.Func([OrderId], [Result_3], []),
     'getOrdersByStatus' : IDL.Func([OrderStatus], [IDL.Vec(Order)], []),
     'getOwnerICPAccount' : IDL.Func(
@@ -428,9 +436,15 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Product)],
         ['query'],
       ),
+    'getProductsByStatus' : IDL.Func(
+        [ProductStatus],
+        [IDL.Vec(Product)],
+        ['query'],
+      ),
     'getProfile' : IDL.Func([], [Result_1], []),
     'getSellerProfile' : IDL.Func([], [Result], []),
     'getSellerProfileById' : IDL.Func([SellerId], [Result], []),
+    'getSoldProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'health' : IDL.Func(
         [],
         [IDL.Record({ 'status' : IDL.Text, 'timestamp' : IDL.Int })],
@@ -439,6 +453,9 @@ export const idlFactory = ({ IDL }) => {
     'http_request' : IDL.Func([Request], [Response], ['query']),
     'http_request_update' : IDL.Func([Request], [Response], []),
     'markMatchAsViewed' : IDL.Func([IDL.Nat], [Result_6], []),
+    'markProductAsDraft' : IDL.Func([ProductId], [Result_2], []),
+    'markProductAsSold' : IDL.Func([ProductId], [Result_2], []),
+    'publishProduct' : IDL.Func([ProductId], [Result_2], []),
     'registerUser' : IDL.Func([UserRegistration], [Result_1], []),
     'setMatchInterest' : IDL.Func([IDL.Nat, IDL.Bool], [Result_6], []),
     'topUpBalance' : IDL.Func([TopUpRequest], [Result_5], []),
