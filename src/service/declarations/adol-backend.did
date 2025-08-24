@@ -157,8 +157,7 @@ type ProductUpdate =
    categoryId: opt CategoryId;
    condition: opt text;
    description: opt text;
-   imageUrl: opt text;
-   isActive: opt bool;
+   imageBase64: opt text;
    keySellingPoints: opt vec text;
    knownFlaws: opt text;
    minimumPrice: opt nat;
@@ -166,15 +165,22 @@ type ProductUpdate =
    pickupDeliveryInfo: opt text;
    price: opt nat;
    reasonForSelling: opt text;
+   status: opt ProductStatus;
    stock: opt nat;
    targetPrice: opt nat;
+ };
+type ProductStatus = 
+ variant {
+   active;
+   draft;
+   sold;
  };
 type ProductInput = 
  record {
    categoryId: CategoryId;
    condition: text;
    description: text;
-   imageUrl: opt text;
+   imageBase64: opt text;
    keySellingPoints: vec text;
    knownFlaws: text;
    minimumPrice: opt nat;
@@ -182,6 +188,7 @@ type ProductInput =
    pickupDeliveryInfo: text;
    price: nat;
    reasonForSelling: text;
+   status: opt ProductStatus;
    stock: nat;
    targetPrice: opt nat;
  };
@@ -202,8 +209,7 @@ type Product =
    createdBy: principal;
    description: text;
    id: ProductId;
-   imageUrl: opt text;
-   isActive: bool;
+   imageBase64: opt text;
    keySellingPoints: vec text;
    knownFlaws: text;
    minimumPrice: opt nat;
@@ -211,6 +217,7 @@ type Product =
    pickupDeliveryInfo: text;
    price: nat;
    reasonForSelling: text;
+   status: ProductStatus;
    stock: nat;
    targetPrice: opt nat;
    updatedAt: int;
@@ -429,13 +436,14 @@ service : {
   getAllMatches: () -> (vec PotentialMatch);
   getAllOrders: () -> (vec Order);
   getAllPayments: () -> (vec Payment);
-  getAllProducts: () -> (vec Product);
+  getAllProducts: () -> (vec Product) query;
   getAllSellerProfiles: () -> (vec SellerProfile);
   getAllUsers: () -> (vec User);
   getBalance: () -> (Result_7);
   getBuyerProfile: () -> (Result_4);
   getBuyerProfileById: (buyerId: BuyerId) -> (Result_4);
   getCategories: () -> (vec Category) query;
+  getDraftProducts: () -> (vec Product) query;
   getInfo: () ->
    (record {
       description: text;
@@ -453,6 +461,7 @@ service : {
   getMyMatches: () -> (vec PotentialMatch);
   getMyOrders: () -> (vec Order);
   getMyPayments: () -> (vec Payment);
+  getMyProducts: () -> (vec Product);
   getOrder: (orderId: OrderId) -> (Result_3);
   getOrdersByStatus: (status: OrderStatus) -> (vec Order);
   getOwnerICPAccount: () ->
@@ -472,9 +481,11 @@ service : {
   getProduct: (productId: ProductId) -> (Result_2) query;
   getProducts: () -> (vec Product) query;
   getProductsByCategory: (categoryId: CategoryId) -> (vec Product) query;
+  getProductsByStatus: (status: ProductStatus) -> (vec Product) query;
   getProfile: () -> (Result_1);
   getSellerProfile: () -> (Result);
   getSellerProfileById: (sellerId: SellerId) -> (Result);
+  getSoldProducts: () -> (vec Product) query;
   health: () -> (record {
                    status: text;
                    timestamp: int;
@@ -482,6 +493,9 @@ service : {
   http_request: (request: Request) -> (Response) query;
   http_request_update: (request: Request) -> (Response);
   markMatchAsViewed: (matchId: nat) -> (Result_6);
+  markProductAsDraft: (productId: ProductId) -> (Result_2);
+  markProductAsSold: (productId: ProductId) -> (Result_2);
+  publishProduct: (productId: ProductId) -> (Result_2);
   registerUser: (registration: UserRegistration) -> (Result_1);
   setMatchInterest: (matchId: nat, isInterested: bool) -> (Result_6);
   topUpBalance: (request: TopUpRequest) -> (Result_5);

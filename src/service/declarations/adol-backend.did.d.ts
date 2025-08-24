@@ -161,6 +161,7 @@ export interface PotentialMatch {
 export interface Product {
   'id' : ProductId,
   'categoryId' : CategoryId,
+  'status' : ProductStatus,
   'keySellingPoints' : Array<string>,
   'name' : string,
   'createdAt' : bigint,
@@ -169,10 +170,9 @@ export interface Product {
   'reasonForSelling' : string,
   'targetPrice' : [] | [bigint],
   'description' : string,
-  'isActive' : boolean,
   'updatedAt' : bigint,
   'stock' : bigint,
-  'imageUrl' : [] | [string],
+  'imageBase64' : [] | [string],
   'pickupDeliveryInfo' : string,
   'knownFlaws' : string,
   'price' : bigint,
@@ -186,6 +186,7 @@ export type ProductError = { 'InvalidInput' : string } |
 export type ProductId = string;
 export interface ProductInput {
   'categoryId' : CategoryId,
+  'status' : [] | [ProductStatus],
   'keySellingPoints' : Array<string>,
   'name' : string,
   'minimumPrice' : [] | [bigint],
@@ -193,23 +194,26 @@ export interface ProductInput {
   'targetPrice' : [] | [bigint],
   'description' : string,
   'stock' : bigint,
-  'imageUrl' : [] | [string],
+  'imageBase64' : [] | [string],
   'pickupDeliveryInfo' : string,
   'knownFlaws' : string,
   'price' : bigint,
   'condition' : string,
 }
+export type ProductStatus = { 'active' : null } |
+  { 'sold' : null } |
+  { 'draft' : null };
 export interface ProductUpdate {
   'categoryId' : [] | [CategoryId],
+  'status' : [] | [ProductStatus],
   'keySellingPoints' : [] | [Array<string>],
   'name' : [] | [string],
   'minimumPrice' : [] | [bigint],
   'reasonForSelling' : [] | [string],
   'targetPrice' : [] | [bigint],
   'description' : [] | [string],
-  'isActive' : [] | [boolean],
   'stock' : [] | [bigint],
-  'imageUrl' : [] | [string],
+  'imageBase64' : [] | [string],
   'pickupDeliveryInfo' : [] | [string],
   'knownFlaws' : [] | [string],
   'price' : [] | [bigint],
@@ -345,6 +349,7 @@ export interface _SERVICE {
   'getBuyerProfile' : ActorMethod<[], Result_4>,
   'getBuyerProfileById' : ActorMethod<[BuyerId], Result_4>,
   'getCategories' : ActorMethod<[], Array<Category>>,
+  'getDraftProducts' : ActorMethod<[], Array<Product>>,
   'getInfo' : ActorMethod<
     [],
     {
@@ -366,6 +371,7 @@ export interface _SERVICE {
   'getMyMatches' : ActorMethod<[], Array<PotentialMatch>>,
   'getMyOrders' : ActorMethod<[], Array<Order>>,
   'getMyPayments' : ActorMethod<[], Array<Payment>>,
+  'getMyProducts' : ActorMethod<[], Array<Product>>,
   'getOrder' : ActorMethod<[OrderId], Result_3>,
   'getOrdersByStatus' : ActorMethod<[OrderStatus], Array<Order>>,
   'getOwnerICPAccount' : ActorMethod<
@@ -389,13 +395,18 @@ export interface _SERVICE {
   'getProduct' : ActorMethod<[ProductId], Result_2>,
   'getProducts' : ActorMethod<[], Array<Product>>,
   'getProductsByCategory' : ActorMethod<[CategoryId], Array<Product>>,
+  'getProductsByStatus' : ActorMethod<[ProductStatus], Array<Product>>,
   'getProfile' : ActorMethod<[], Result_1>,
   'getSellerProfile' : ActorMethod<[], Result>,
   'getSellerProfileById' : ActorMethod<[SellerId], Result>,
+  'getSoldProducts' : ActorMethod<[], Array<Product>>,
   'health' : ActorMethod<[], { 'status' : string, 'timestamp' : bigint }>,
   'http_request' : ActorMethod<[Request], Response>,
   'http_request_update' : ActorMethod<[Request], Response>,
   'markMatchAsViewed' : ActorMethod<[bigint], Result_6>,
+  'markProductAsDraft' : ActorMethod<[ProductId], Result_2>,
+  'markProductAsSold' : ActorMethod<[ProductId], Result_2>,
+  'publishProduct' : ActorMethod<[ProductId], Result_2>,
   'registerUser' : ActorMethod<[UserRegistration], Result_1>,
   'setMatchInterest' : ActorMethod<[bigint, boolean], Result_6>,
   'topUpBalance' : ActorMethod<[TopUpRequest], Result_5>,

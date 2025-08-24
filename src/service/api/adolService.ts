@@ -49,35 +49,56 @@ export interface Product {
   description: string;
   price: bigint;
   stock: bigint;
-  imageBase64?: string; // Image data as base64 string
-  isActive: boolean;
+  imageBase64?: [] | [string]; // Backend uses imageBase64
+  status?: any; // Flexible type since actual format may vary
   categoryId: bigint; // Backend uses bigint for categoryId
   condition: string;
   createdAt: bigint;
-  createdBy: string;
+  createdBy: string; // Principal as string
   keySellingPoints: string[];
   knownFlaws: string;
-  minimumPrice?: bigint;
+  minimumPrice?: [] | [bigint]; // Optional with array format
   pickupDeliveryInfo: string;
   reasonForSelling: string;
-  targetPrice?: bigint;
+  targetPrice?: [] | [bigint]; // Optional with array format
   updatedAt: bigint;
 }
 
+// Status type for the backend
+export type ProductStatus = { active: null } | { sold: null } | { draft: null };
+
 export interface ProductInput {
-  name: string;
-  description: string;
-  price: bigint;
-  stock: bigint;
-  imageBase64: [] | [string]; // Image data as base64 string
   categoryId: bigint; // Backend expects bigint, not string
-  condition: string;
+  status: [] | [ProductStatus]; // Optional variant format
   keySellingPoints: string[];
-  knownFlaws: string;
+  name: string;
   minimumPrice: [] | [bigint]; // Candid optional format
-  pickupDeliveryInfo: string;
   reasonForSelling: string;
   targetPrice: [] | [bigint]; // Candid optional format
+  description: string;
+  stock: bigint;
+  imageBase64: [] | [string]; // Backend expects imageBase64
+  pickupDeliveryInfo: string;
+  knownFlaws: string;
+  price: bigint;
+  condition: string;
+}
+
+export interface ProductUpdate {
+  name?: [] | [string];
+  description?: [] | [string];
+  price?: [] | [bigint];
+  stock?: [] | [bigint];
+  imageBase64?: [] | [string];
+  categoryId?: [] | [bigint];
+  condition?: [] | [string];
+  keySellingPoints?: [] | [string[]];
+  knownFlaws?: [] | [string];
+  minimumPrice?: [] | [bigint];
+  pickupDeliveryInfo?: [] | [string];
+  reasonForSelling?: [] | [string];
+  targetPrice?: [] | [bigint];
+  status?: [] | [ProductStatus];
 }
 
 export interface Category {
@@ -259,17 +280,185 @@ export class AdolService {
     }
   }
 
+  // Get user's draft products
+  async getDraftProducts(): Promise<Product[]> {
+    try {
+      await this.ensureActor();
+      
+      // Check if user is authenticated
+      const isAuth = await this.isAuthenticated();
+      if (!isAuth || !this.authClient) {
+        console.warn("User not authenticated, cannot get draft products");
+        return [];
+      }
+
+      // Get the user's principal ID
+      const identity = this.authClient.getIdentity();
+      const userPrincipal = identity.getPrincipal();
+      const userPrincipalString = userPrincipal.toString();
+      console.log("Getting draft products for user principal:", userPrincipalString);
+
+      // Get all products and filter by current user's principal and draft status
+      const allProducts = await this.actor.getDraftProducts();
+      console.log("Total products available:", allProducts.length);
+      
+      const userDraftProducts = allProducts.filter((product: Product) => {
+        // Convert createdBy to string for comparison
+        let createdByString: string;
+        if (typeof product.createdBy === 'string') {
+          createdByString = product.createdBy;
+        } else {
+          createdByString = String(product.createdBy);
+        }
+        
+        const isUserProduct = createdByString === userPrincipalString;
+        if (!isUserProduct) return false;
+
+        // Debug: Log the product status
+        console.log(`Checking product ${product.name} status:`, product.status);
+        console.log("Status type:", typeof product.status);
+        console.log("Status is array:", Array.isArray(product.status));
+
+        // Check if product status is draft
+        const status = product.status;
+        if (Array.isArray(status) && status.length > 0) {
+          const statusVariant = status[0];
+          console.log("Status variant:", statusVariant);
+          const isDraft = statusVariant && typeof statusVariant === 'object' && 'draft' in statusVariant;
+          console.log("Is draft:", isDraft);
+          return isDraft;
+        }
+        if (typeof status === 'object' && status && 'draft' in status) {
+          console.log("Direct object draft status found");
+          return true;
+        }
+        
+        console.log("Product is not draft status");
+        return false;
+      });
+      
+      console.log(`Found ${userDraftProducts.length} draft products for user ${userPrincipalString}`);
+      return userDraftProducts;
+    } catch (error) {
+      console.error("Failed to get user's draft products:", error);
+      return [];
+    }
+  }
+
+  // Get user's sold products
+  async getSoldProducts(): Promise<Product[]> {
+    try {
+      await this.ensureActor();
+      
+      // Check if user is authenticated
+      const isAuth = await this.isAuthenticated();
+      if (!isAuth || !this.authClient) {
+        console.warn("User not authenticated, cannot get sold products");
+        return [];
+      }
+
+      // Get the user's principal ID
+      const identity = this.authClient.getIdentity();
+      const userPrincipal = identity.getPrincipal();
+      const userPrincipalString = userPrincipal.toString();
+      console.log("Getting sold products for user principal:", userPrincipalString);
+
+      // Get all products and filter by current user's principal and sold status
+      const allProducts = await this.actor.getSoldProducts();
+      console.log("Total products available:", allProducts.length);
+      
+      const userSoldProducts = allProducts.filter((product: Product) => {
+        // Convert createdBy to string for comparison
+        let createdByString: string;
+        if (typeof product.createdBy === 'string') {
+          createdByString = product.createdBy;
+        } else {
+          createdByString = String(product.createdBy);
+        }
+        
+        const isUserProduct = createdByString === userPrincipalString;
+        if (!isUserProduct) return false;
+
+        // Debug: Log the product status
+        console.log(`Checking product ${product.name} status:`, product.status);
+        console.log("Status type:", typeof product.status);
+        console.log("Status is array:", Array.isArray(product.status));
+
+        // Check if product status is sold
+        const status = product.status;
+        if (Array.isArray(status) && status.length > 0) {
+          const statusVariant = status[0];
+          console.log("Status variant:", statusVariant);
+          const isSold = statusVariant && typeof statusVariant === 'object' && 'sold' in statusVariant;
+          console.log("Is sold:", isSold);
+          return isSold;
+        }
+        if (typeof status === 'object' && status && 'sold' in status) {
+          console.log("Direct object sold status found");
+          return true;
+        }
+        
+        console.log("Product is not sold status");
+        return false;
+      });
+      
+      console.log(`Found ${userSoldProducts.length} sold products for user ${userPrincipalString}`);
+      return userSoldProducts;
+    } catch (error) {
+      console.error("Failed to get user's sold products:", error);
+      return [];
+    }
+  }
+
+  // Helper method to create a test product with specific status (for testing)
+  async createTestProduct(status: "active" | "draft" | "sold" = "active"): Promise<Product | null> {
+    try {
+      const statusVariant = { [status]: null } as ProductStatus;
+      
+      const testProduct: ProductInput = {
+        categoryId: BigInt(1), // Assuming category 1 exists
+        status: [statusVariant],
+        keySellingPoints: ["Test product", "For testing purposes"],
+        name: `Test Product - ${status.toUpperCase()}`,
+        minimumPrice: [BigInt(50)],
+        reasonForSelling: "Testing purposes",
+        targetPrice: [BigInt(100)],
+        description: `This is a test product with ${status} status`,
+        stock: BigInt(1),
+        imageBase64: [],
+        pickupDeliveryInfo: "Test location",
+        knownFlaws: "None",
+        price: BigInt(75),
+        condition: "new"
+      };
+
+      console.log(`Creating test product with ${status} status:`, testProduct);
+      return await this.createProduct(testProduct);
+    } catch (error) {
+      console.error("Failed to create test product:", error);
+      return null;
+    }
+  }
+
   async createProduct(input: ProductInput): Promise<Product | null> {
     try {
       await this.ensureActor();
       
-      // Log the input data being sent to backend
-      console.log("Sending product data to backend:", input);
-      console.log("Actor instance:", this.actor);
-      
       // Check if user is authenticated
       const isAuth = await this.isAuthenticated();
-      console.log("User authenticated:", isAuth);
+      if (!isAuth) {
+        console.error("User not authenticated for product creation");
+        throw new Error("Please log in again to create products");
+      }
+
+      // Log the input data being sent to backend
+      console.log("Sending product data to backend:", input);
+      console.log("Status field specifically:", input.status);
+      console.log("Status field type:", typeof input.status);
+      console.log("Status field is array:", Array.isArray(input.status));
+      console.log("Status field length:", input.status?.length);
+      console.log("Status field content:", JSON.stringify(input.status));
+      console.log("Actor instance:", this.actor);
       
       // Check if user has seller profile (may be required for creating products)
       try {
@@ -278,7 +467,7 @@ export class AdolService {
       } catch (profileError) {
         console.log("No seller profile or error getting profile:", profileError);
       }
-      
+
       const result: Result<Product, any> = await this.actor.createProduct(input);
       console.log("Backend response:", result);
       
@@ -308,6 +497,61 @@ export class AdolService {
       }
     } catch (error) {
       console.error("Exception during createProduct:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
+      
+      // Check if this is a signature verification error
+      if (error instanceof Error && error.message.includes('Invalid signature')) {
+        console.error("Authentication signature is invalid. User needs to re-authenticate.");
+        // Force re-authentication on next request
+        this.authClient = null;
+        this.actor = null;
+        throw new Error("Your session has expired. Please log in again.");
+      }
+      
+      return null;
+    }
+  }
+
+  async updateProduct(productId: string, update: ProductUpdate): Promise<Product | null> {
+    try {
+      await this.ensureActor();
+      
+      // Log the update data being sent to backend
+      console.log("Updating product:", productId, "with data:", update);
+      
+      // Check if user is authenticated
+      const isAuth = await this.isAuthenticated();
+      console.log("User authenticated:", isAuth);
+      
+      const result: Result<Product, any> = await this.actor.updateProduct(productId, update);
+      console.log("Backend update response:", result);
+      
+      if ('ok' in result) {
+        console.log("Product updated successfully:", result.ok);
+        return result.ok;
+      } else {
+        console.error("Backend returned error:", result.err);
+        console.error("Error type:", typeof result.err);
+        console.error("Error keys:", Object.keys(result.err || {}));
+        
+        // Handle specific ProductError types
+        if (result.err) {
+          if ('Unauthorized' in result.err) {
+            console.error("User is not authorized to update this product.");
+          } else if ('ProductNotFound' in result.err) {
+            console.error("Product not found.");
+          } else if ('CategoryNotFound' in result.err) {
+            console.error("Category not found.");
+          } else if ('InvalidInput' in result.err) {
+            console.error("Invalid input provided:", result.err.InvalidInput);
+          }
+        }
+        
+        return null;
+      }
+    } catch (error) {
+      console.error("Exception during updateProduct:", error);
       console.error("Error type:", typeof error);
       console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
       return null;
