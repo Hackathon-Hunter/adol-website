@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
 import { AdolService } from "@/service/api/adolService";
+import { formatRupiah } from "@/utils/currency";
 
 type ProductForm = {
     title: string;

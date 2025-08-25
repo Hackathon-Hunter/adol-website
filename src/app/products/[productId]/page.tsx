@@ -24,6 +24,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
 import { getAdolService, type Product as BackendProduct } from "@/service/api/adolService";
+import { formatRupiah } from "@/utils/currency";
 
 interface ProductDetailPageProps {
     params: Promise<{
@@ -271,11 +272,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-3xl font-bold text-blue-600">
-                                            ${Number(product.price)}
+                                            {formatRupiah(product.price)}
                                         </p>
-                                        {product.minimumPrice && (
+                                        {product.minimumPrice && product.minimumPrice.length > 0 && (
                                             <p className="text-sm text-gray-500">
-                                                Minimum price: <span className="font-semibold">${Number(product.minimumPrice)}</span>
+                                                Minimum price: <span className="font-semibold">{formatRupiah(product.minimumPrice[0])}</span>
                                             </p>
                                         )}
                                     </div>
@@ -305,15 +306,15 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Category:</span>
-                                    <p className="font-medium">{product.categoryId}</p>
+                                    <p className="font-medium text-gray-600">{product.categoryId}</p>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Stock:</span>
-                                    <p className="font-medium">{Number(product.stock)}</p>
+                                    <p className="font-medium text-gray-600">{Number(product.stock)}</p>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Condition:</span>
-                                    <p className="font-medium">{product.condition}</p>
+                                    <p className="font-medium text-gray-600">{product.condition}</p>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Created:</span>
@@ -398,22 +399,22 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             )}
 
                             {/* Price Information */}
-                            {product.targetPrice && (
+                            {product.targetPrice && product.targetPrice.length > 0 && (
                                 <div>
                                     <h3 className="text-lg font-semibold mb-3 text-gray-700">Price Information</h3>
                                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Current Price:</span>
-                                            <span className="font-semibold">${Number(product.price)}</span>
+                                            <span className="font-semibold text-gray-600">{formatRupiah(product.price)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Target Price:</span>
-                                            <span className="font-semibold">${Number(product.targetPrice)}</span>
+                                            <span className="font-semibold text-gray-600">{formatRupiah(product.targetPrice[0])}</span>
                                         </div>
-                                        {product.minimumPrice && (
+                                        {product.minimumPrice && product.minimumPrice.length > 0 && (
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Minimum Price:</span>
-                                                <span className="font-semibold">${Number(product.minimumPrice)}</span>
+                                                <span className="font-semibold text-gray-600">{formatRupiah(product.minimumPrice[0])}</span>
                                             </div>
                                         )}
                                     </div>

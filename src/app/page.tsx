@@ -180,7 +180,7 @@ transition-colors w-full sm:w-auto"
               </button>
 
               <button
-                onClick={toAuth}
+                onClick={()=> router.push('/products')}
                 className="flex cursor-pointer items-center justify-center gap-2 border border-gray-300 text-gray-700 px-6 sm:px-8 py-3 rounded-full shadow-md font-semibold hover:border-gray-400 transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 <WandSparkles size={18} />
