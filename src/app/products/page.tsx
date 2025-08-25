@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Globe, Clock, MoreHorizontal, Store, RefreshCcw } from "lucide-react";
 import MainLayout from "../layout/MainLayout";
 import { getAdolService, type Product as BackendProduct } from "@/service/api/adolService";
 import { useAuth } from "@/hooks/useAuth";
+import { formatRupiah } from "@/utils/currency";
 
 // Convert backend product to display format
 interface Product {
@@ -22,7 +23,7 @@ interface Product {
   condition: string;
 }
 
-export default function ProductsPage() {
+function ProductsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { principal, isAuthenticated } = useAuth();
@@ -405,7 +406,7 @@ export default function ProductsPage() {
                                     <hr />
 
                                     {/* Price */}
-                                    <p className="text-blue-600 font-semibold text-sm">${p.price}</p>
+                                    <p className="text-blue-600 font-semibold text-sm">{formatRupiah(p.price)}</p>
                                     <p className="text-xs text-neutral-500">Stock: {p.stock}</p>
 
                                     <hr />
@@ -428,5 +429,28 @@ export default function ProductsPage() {
                 )}
             </div>
         </MainLayout>
+    );
+}
+
+// Loading component for Suspense fallback
+function ProductsLoading() {
+    return (
+        <MainLayout>
+            <div className="p-6">
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Loading products...</span>
+                </div>
+            </div>
+        </MainLayout>
+    );
+}
+
+// Main page component with Suspense boundary
+export default function ProductsPage() {
+    return (
+        <Suspense fallback={<ProductsLoading />}>
+            <ProductsContent />
+        </Suspense>
     );
 }

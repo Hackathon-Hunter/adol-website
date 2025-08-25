@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ICP Authentication App",
+  title: "Adol",
   description: "Secure authentication with Internet Identity",
 };
 

@@ -24,6 +24,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
 import { getAdolService, type Product as BackendProduct } from "@/service/api/adolService";
+import { formatRupiah } from "@/utils/currency";
 
 interface ProductDetailPageProps {
     params: Promise<{
@@ -101,7 +102,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
     const getStatusColor = (status: any) => {
         if (!status) return "bg-gray-100 text-gray-700";
-        
+
         // Handle array format [{ active: null }] or [{ sold: null }]
         if (Array.isArray(status) && status.length > 0) {
             const statusVariant = status[0];
@@ -111,20 +112,20 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 if ('draft' in statusVariant) return "bg-gray-100 text-gray-700";
             }
         }
-        
+
         // Handle direct variant object format { active: null }
         if (typeof status === 'object') {
             if ('active' in status) return "bg-green-100 text-green-700";
             if ('sold' in status) return "bg-red-100 text-red-700";
             if ('draft' in status) return "bg-gray-100 text-gray-700";
         }
-        
+
         return "bg-gray-100 text-gray-700";
     };
 
     const getStatusText = (status: any) => {
         if (!status) return "Draft";
-        
+
         // Handle array format [{ active: null }] or [{ sold: null }]
         if (Array.isArray(status) && status.length > 0) {
             const statusVariant = status[0];
@@ -134,14 +135,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 if ('draft' in statusVariant) return "Draft";
             }
         }
-        
+
         // Handle direct variant object format { active: null }
         if (typeof status === 'object') {
             if ('active' in status) return "Active";
             if ('sold' in status) return "Sold";
             if ('draft' in status) return "Draft";
         }
-        
+
         return "Draft";
     };
 
@@ -243,8 +244,8 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             <div className="relative">
                                 <img
                                     src={
-                                        (product.imageBase64 && Array.isArray(product.imageBase64) && product.imageBase64.length > 0) 
-                                            ? product.imageBase64[0] 
+                                        (product.imageBase64 && Array.isArray(product.imageBase64) && product.imageBase64.length > 0)
+                                            ? product.imageBase64[0]
                                             : "/assets/images/background.png"
                                     }
                                     alt={product.name}
@@ -271,11 +272,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-3xl font-bold text-blue-600">
-                                            ${Number(product.price)}
+                                            {formatRupiah(product.price)}
                                         </p>
-                                        {product.minimumPrice && (
+                                        {product.minimumPrice && product.minimumPrice.length > 0 && (
                                             <p className="text-sm text-gray-500">
-                                                Minimum price: <span className="font-semibold">${Number(product.minimumPrice)}</span>
+                                                Minimum price: <span className="font-semibold">{formatRupiah(product.minimumPrice[0])}</span>
                                             </p>
                                         )}
                                     </div>
@@ -305,15 +306,15 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Category:</span>
-                                    <p className="font-medium">{product.categoryId}</p>
+                                    <span className="font-semibold">{product.categoryId}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Stock:</span>
-                                    <p className="font-medium">{Number(product.stock)}</p>
+                                    <span className="font-semibold">{Number(product.stock)}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Condition:</span>
-                                    <p className="font-medium">{product.condition}</p>
+                                    <span className="font-semibold">{product.condition}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Created:</span>
@@ -342,7 +343,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                     <div className="mt-8 grid lg:grid-cols-2 gap-8">
                         {/* Description */}
                         <div>
-                            <h2 className="text-xl font-semibold mb-4">Description</h2>
+                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Description</h2>
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-gray-700 whitespace-pre-wrap">
                                     {product.description}
@@ -352,7 +353,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             {/* Key Selling Points */}
                             {product.keySellingPoints && product.keySellingPoints.length > 0 && (
                                 <div className="mt-6">
-                                    <h3 className="text-lg font-semibold mb-3">Key Selling Points</h3>
+                                    <h3 className="text-lg font-semibold mb-3 text-gray-700">Key Selling Points</h3>
                                     <ul className="space-y-2">
                                         {product.keySellingPoints.map((point, index) => (
                                             <li key={index} className="flex items-start gap-2">
@@ -398,22 +399,22 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                             )}
 
                             {/* Price Information */}
-                            {product.targetPrice && (
+                            {product.targetPrice && product.targetPrice.length > 0 && (
                                 <div>
                                     <h3 className="text-lg font-semibold mb-3">Price Information</h3>
                                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Current Price:</span>
-                                            <span className="font-semibold">${Number(product.price)}</span>
+                                            <span className="font-semibold">{formatRupiah(product.price)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Target Price:</span>
-                                            <span className="font-semibold">${Number(product.targetPrice)}</span>
+                                            <span className="font-semibold">{formatRupiah(product.targetPrice[0])}</span>
                                         </div>
-                                        {product.minimumPrice && (
+                                        {product.minimumPrice && product.minimumPrice.length > 0 && (
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Minimum Price:</span>
-                                                <span className="font-semibold">${Number(product.minimumPrice)}</span>
+                                                <span className="font-semibold">{formatRupiah(product.minimumPrice[0])}</span>
                                             </div>
                                         )}
                                     </div>
