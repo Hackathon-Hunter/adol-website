@@ -152,14 +152,6 @@ Begin by opening a terminal window.
 - **Access the application**
   - Frontend: http://localhost:3000
 
-## Architecture Diagram
-
-![ADOL Architecture Diagram](docs/images/architecture.png)
-
-## User Flow Diagram
-
-![ADOL UserFlow Diagram](docs/images/userflow.png)
-
 ## 🛣️ ADOL Roadmap
 
 ### 🧱 Phase 1 – AI Foundation & Core Platform
@@ -189,14 +181,6 @@ Begin by opening a terminal window.
 - Integrate ADOL into the **SNS (Service Nervous System)** for decentralized platform governance
 - Begin development of **ADOL API/SDK** to allow third-party developers to access AI and marketplace tools
 - Launch **ADOL token economy** with rewards for quality listings and community contributions
-
-## Created by ADOL Team
-
-- Taufiq Hidayah (Full-Stack Developer & Project Lead)
-- AI Integration Specialist (Backend & AI Systems)
-- Blockchain Developer (Internet Computer Integration)
-- UI/UX Designer (User Experience & Interface Design)
-- Product Manager (Strategy & Market Analysis)
 
 ## 🏃‍♂️ Running Locally
 
@@ -428,7 +412,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 📚 Documentation & Resources
 
-- **Repository**: [https://github.com/Hackathon-Hunter/adol-website](https://github.com/Hackathon-Hunter/adol-website)
+- **Repository**: [https://github.com/hunters-code/adol-website](https://github.com/hunters-code/adol-website)
 - **Internet Computer**: [https://internetcomputer.org/](https://internetcomputer.org/)
 - **Next.js**: [https://nextjs.org/](https://nextjs.org/)
 - **Fetch.ai**: [https://fetch.ai/](https://fetch.ai/)
@@ -439,4 +423,4 @@ For support, email support@adol.com or join our community discussions.
 
 ---
 
-Built with ❤️ using Internet Computer, Next.js, and AI
+Built with ❤️ using Internet Computer, Next.js, and FetchAi
