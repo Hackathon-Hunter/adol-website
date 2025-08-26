@@ -152,6 +152,15 @@ Begin by opening a terminal window.
 - **Access the application**
   - Frontend: http://localhost:3000
 
+## Tech Stack
+
+<img width="1127" height="630" alt="image" src="https://github.com/user-attachments/assets/6a6315f4-2c6a-45af-80fb-89fbacf20df4" />
+
+
+## User Flow
+
+<img width="1128" height="631" alt="image" src="https://github.com/user-attachments/assets/8fcb67ab-cb22-4c97-bf5f-c2958a12c029" />
+
 ## 🛣️ ADOL Roadmap
 
 ### 🧱 Phase 1 – AI Foundation & Core Platform
