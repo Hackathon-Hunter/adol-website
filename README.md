@@ -278,7 +278,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**Built with ❤️ using Internet Computer, Next.js, and AI**
+**Built with ❤️ using Internet Computer, and Fetch.AI**
 
 *Empowering the future of decentralized commerce*
 
