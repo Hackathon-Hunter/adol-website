@@ -281,7 +281,7 @@ function ProductsContent() {
     const filtered = products;
 
     const handleProductClick = (productId: string) => {
-        router.push(`/products/${productId}`);
+        router.push(`/products/detail?id=${productId}`);
     };
 
     return (

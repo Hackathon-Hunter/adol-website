@@ -7,18 +7,22 @@ import MainLayout from "../../layout/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ButtonPrimary from "@/components/ui/ButtonPrimary";
 import ButtonSecondary from "@/components/ui/ButtonSecondary";
-import { AdolService } from "@/service/api/adolService";
+import { getAdolService, type ProductUpdate, type ProductStatus } from "@/service/api/adolService";
 import { formatRupiah } from "@/utils/currency";
 
 type ProductForm = {
   title: string;
   price: string;
   minPrice: string;
+  targetPrice: string;
+  stock: string;
   description: string;
   category: string;
   condition: string;
   location: string;
-  marketplace: string;
+  keySellingPoints: string;
+  knownFlaws: string;
+  reasonForSelling: string;
   imageUrl: string;
   status: string;
 };
@@ -34,11 +38,15 @@ export default function EditProductPage() {
     title: "",
     price: "",
     minPrice: "",
+    targetPrice: "",
+    stock: "",
     description: "",
     category: "",
     condition: "",
     location: "",
-    marketplace: "",
+    keySellingPoints: "",
+    knownFlaws: "",
+    reasonForSelling: "",
     imageUrl: "",
     status: "active",
   });
@@ -53,28 +61,51 @@ export default function EditProductPage() {
     const loadProduct = async () => {
       setLoading(true);
       try {
-        const adolServiceInstance = new AdolService();
-        const product = await adolServiceInstance.getProduct(productId);
+        const adolService = await getAdolService();
+        const product = await adolService.getProduct(productId);
 
         if (product) {
+          // Helper function to get status string from backend status variant
+          const getStatusString = (status: any): string => {
+            if (Array.isArray(status) && status.length > 0) {
+              const statusVariant = status[0];
+              if (statusVariant && typeof statusVariant === "object") {
+                if ("active" in statusVariant) return "active";
+                if ("sold" in statusVariant) return "sold";
+                if ("draft" in statusVariant) return "draft";
+              }
+            }
+            if (typeof status === "object" && status) {
+              if ("active" in status) return "active";
+              if ("sold" in status) return "sold"; 
+              if ("draft" in status) return "draft";
+            }
+            return "draft"; // Default fallback
+          };
+
           setFormData({
             title: product.name,
             price: product.price.toString(),
-            minPrice:
-              product.minimumPrice && product.minimumPrice.length > 0
-                ? product.minimumPrice[0]?.toString() ||
-                  product.price.toString()
-                : product.price.toString(),
+            minPrice: product.minimumPrice && product.minimumPrice.length > 0
+              ? product.minimumPrice[0]?.toString() || product.price.toString()
+              : product.price.toString(),
+            targetPrice: product.targetPrice && product.targetPrice.length > 0
+              ? product.targetPrice[0]?.toString() || ""
+              : "",
+            stock: product.stock?.toString() || "1",
             description: product.description,
             category: product.categoryId.toString(),
             condition: product.condition,
-            location: product.pickupDeliveryInfo,
-            marketplace: "", // This field doesn't exist in backend
-            imageUrl:
-              (product.imageBase64 && product.imageBase64.length > 0
-                ? product.imageBase64[0]
-                : "") || "",
-            status: product.status === true ? "active" : "draft",
+            location: product.pickupDeliveryInfo || "",
+            keySellingPoints: Array.isArray(product.keySellingPoints) 
+              ? product.keySellingPoints.join(", ") 
+              : "",
+            knownFlaws: product.knownFlaws || "",
+            reasonForSelling: product.reasonForSelling || "",
+            imageUrl: product.imageBase64 && product.imageBase64.length > 0
+              ? product.imageBase64[0] || ""
+              : "",
+            status: getStatusString(product.status),
           });
         }
       } catch (error) {
@@ -119,42 +150,49 @@ export default function EditProductPage() {
 
     setSaving(true);
     try {
-      const adolServiceInstance = new AdolService();
+      const adolService = await getAdolService();
+
+      // Helper function to create ProductStatus variant
+      const createProductStatus = (status: string): ProductStatus => {
+        switch (status) {
+          case "active": return { active: null };
+          case "sold": return { sold: null };
+          case "draft": return { draft: null };
+          default: return { draft: null };
+        }
+      };
+
+      // Prepare update data with proper Candid optional format
+      const updateData: ProductUpdate = {
+        name: formData.title ? [formData.title] : [],
+        description: formData.description ? [formData.description] : [],
+        price: formData.price ? [BigInt(formData.price)] : [],
+        stock: formData.stock ? [BigInt(formData.stock)] : [],
+        imageBase64: formData.imageUrl ? [formData.imageUrl] : [],
+        categoryId: formData.category ? [BigInt(formData.category)] : [],
+        condition: formData.condition ? [formData.condition] : [],
+        keySellingPoints: formData.keySellingPoints 
+          ? [formData.keySellingPoints.split(",").map(point => point.trim()).filter(Boolean)]
+          : [],
+        knownFlaws: formData.knownFlaws ? [formData.knownFlaws] : [],
+        minimumPrice: formData.minPrice ? [BigInt(formData.minPrice)] : [],
+        pickupDeliveryInfo: formData.location ? [formData.location] : [],
+        reasonForSelling: formData.reasonForSelling ? [formData.reasonForSelling] : [],
+        targetPrice: formData.targetPrice ? [BigInt(formData.targetPrice)] : [],
+        status: formData.status ? [createProductStatus(formData.status)] : [],
+      };
+
+      console.log("Updating product with data:", updateData);
 
       // Update product with new data
-      await adolServiceInstance.updateProduct(productId, {
-        name: formData.title ? ([formData.title] as [string]) : ([] as []),
-        description: formData.description
-          ? ([formData.description] as [string])
-          : ([] as []),
-        price: formData.price
-          ? ([BigInt(formData.price)] as [bigint])
-          : ([] as []),
-        stock: [] as [], // Not in form, keep empty
-        imageBase64: formData.imageUrl
-          ? ([formData.imageUrl] as [string])
-          : ([] as []),
-        categoryId: formData.category ? ([formData.category] as unknown as [bigint]) : ([] as []),
-        condition: formData.condition
-          ? ([formData.condition] as [string])
-          : ([] as []),
-        keySellingPoints: [] as [], // Not in form, keep empty
-        knownFlaws: [] as [], // Not in form, keep empty
-        minimumPrice: formData.minPrice
-          ? ([BigInt(formData.minPrice)] as [bigint])
-          : ([] as []),
-        pickupDeliveryInfo: formData.location
-          ? ([formData.location] as [string])
-          : ([] as []),
-        reasonForSelling: [] as [], // Not in form, keep empty
-        targetPrice: [] as [], // Not in form, keep empty
-        status: formData.status
-          ? ([{ [formData.status]: null } as any] as [any])
-          : ([] as []),
-      });
+      const result = await adolService.updateProduct(productId, updateData);
 
-      // Navigate back to product detail with query params
-      router.push(`/products/detail?id=${productId}`);
+      if (result) {
+        // Navigate back to product detail with query params
+        router.push(`/products/detail?id=${productId}`);
+      } else {
+        alert("Failed to save product. Please check your input and try again.");
+      }
     } catch (error) {
       console.error("Failed to save product:", error);
       alert("Failed to save product. Please try again.");
@@ -172,7 +210,7 @@ export default function EditProductPage() {
       <ProtectedRoute>
         <MainLayout>
           <div className="min-h-screen bg-gray-50 p-4">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto text-black">
               <div className="text-center py-8">
                 <p className="text-gray-600">Product ID is required to edit.</p>
                 <button
@@ -194,7 +232,7 @@ export default function EditProductPage() {
       <ProtectedRoute>
         <MainLayout>
           <div className="min-h-screen bg-gray-50 p-4">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto text-black">
               <div className="animate-pulse">
                 <div className="h-8 bg-gray-300 rounded mb-6"></div>
                 <div className="space-y-4">
@@ -214,7 +252,7 @@ export default function EditProductPage() {
     <ProtectedRoute>
       <MainLayout>
         <div className="min-h-screen bg-gray-50 p-4">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto text-black">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -284,8 +322,8 @@ export default function EditProductPage() {
                   />
                 </div>
 
-                {/* Price and Min Price */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Price, Target Price, and Min Price */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Price (Rp)
@@ -294,6 +332,19 @@ export default function EditProductPage() {
                       type="number"
                       name="price"
                       value={formData.price}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Target Price (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      name="targetPrice"
+                      value={formData.targetPrice}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="0"
@@ -312,6 +363,22 @@ export default function EditProductPage() {
                       placeholder="0"
                     />
                   </div>
+                </div>
+
+                {/* Stock */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="1"
+                    min="1"
+                  />
                 </div>
 
                 {/* Description */}
@@ -385,10 +452,64 @@ export default function EditProductPage() {
                   />
                 </div>
 
+                {/* Key Selling Points */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Key Selling Points
+                  </label>
+                  <textarea
+                    name="keySellingPoints"
+                    value={formData.keySellingPoints}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Highlight the best features, separate multiple points with commas"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Example: Original packaging, Works perfectly, Recently serviced
+                  </p>
+                </div>
+
+                {/* Known Flaws */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Known Issues/Flaws
+                  </label>
+                  <textarea
+                    name="knownFlaws"
+                    value={formData.knownFlaws}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Be honest about any issues or damage (optional)"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Transparency helps build trust with buyers
+                  </p>
+                </div>
+
+                {/* Reason for Selling */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Selling
+                  </label>
+                  <textarea
+                    name="reasonForSelling"
+                    value={formData.reasonForSelling}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Why are you selling this item? (optional)"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Example: Upgrading to newer model, Moving abroad, No longer needed
+                  </p>
+                </div>
+
                 {/* Status */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
+                    Product Status
                   </label>
                   <select
                     name="status"
@@ -396,9 +517,13 @@ export default function EditProductPage() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
+                    <option value="active">Active - Live and available for purchase</option>
+                    <option value="draft">Draft - Not yet published</option>
+                    <option value="sold">Sold - Product has been sold</option>
                   </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Active products are visible to buyers, drafts are saved but not published
+                  </p>
                 </div>
               </div>
 

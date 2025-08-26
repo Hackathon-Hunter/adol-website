@@ -1,0 +1,62 @@
+[
+  {
+    "match": "**/*",
+    "security_policy": "standard"
+  },
+  {
+    "match": "index.html",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "no-cache, no-store, must-revalidate"
+    }
+  },
+  {
+    "match": "**/*.js",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    }
+  },
+  {
+    "match": "**/*.css",
+    "security_policy": "standard", 
+    "headers": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    }
+  },
+  {
+    "match": "**/*.ico",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000"
+    }
+  },
+  {
+    "match": "**/*.png",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000"
+    }
+  },
+  {
+    "match": "**/*.jpg",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000"
+    }
+  },
+  {
+    "match": "**/*.jpeg",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000"
+    }
+  },
+  {
+    "match": "**/*.svg",
+    "security_policy": "standard",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000"
+    }
+  }
+]
